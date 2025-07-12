@@ -3,3 +3,8 @@ Hi, i am learning django with project based , so currently I want to learn | 1  
 
 
 Hi, i am learning django with project based , so currently I want to learn | 2  | Personal Portfolio      | Static pages with templates           | Templates, URL mapping, static files                 | as I am beginnner please give me  code regarding above and guide me with the steps please with start app portfolio
+
+
+
+Hi, i am learning django with project based , so currently I want to learn | 3  | Blog App                | CRUD blog with posts                  | Models, Admin, Forms, Views                          | as I am beginnner please give me  code regarding above and guide me with the steps please with start app portfolio
+

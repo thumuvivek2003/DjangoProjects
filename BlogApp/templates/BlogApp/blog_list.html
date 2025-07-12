@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>My Blog</title>
+</head>
+<body>
+    <h1>Blog Posts</h1>
+    <a href="{% url 'blog_create' %}">Create New Post</a>
+    <ul>
+        {% for post in posts %}
+            <li>
+                <strong>{{ post.title }}</strong><br>
+                {{ post.content|linebreaks }}<br>
+                <a href="{% url 'blog_update' post.pk %}">Edit</a> |
+                <a href="{% url 'blog_delete' post.pk %}">Delete</a>
+            </li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
