@@ -1312,3 +1312,247 @@ Visit: [http://127.0.0.1:8000/tasks/](http://127.0.0.1:8000/tasks/)
 ---
 
 Would you like to include **login/logout and user-specific tasks** next, or move on to the next project in your learning plan?
+
+
+
+
+# 6  | User Auth System        | Login, Register, Logout               | `auth` module, sessions, hashing                     |
+Hi, i am learning django with project based , so currently I want to learn | 6  | User Auth System        | Login, Register, Logout               | `auth` module, sessions, hashing                     | as I am beginnner please give me  code regarding above and guide me with the steps please with start app 
+
+Excellent! You’re now diving into **User Authentication** in Django—one of the most critical features for any web app. This step teaches you:
+
+* User **registration**
+* User **login/logout**
+* Django’s built-in `auth` module
+* **Session management**
+* Password **hashing**
+
+---
+
+## ✅ Project Overview
+
+| Feature     | Description                      |
+| ----------- | -------------------------------- |
+| App Name    | `accounts`                       |
+| Goal        | User registration, login, logout |
+| Key Modules | `django.contrib.auth`            |
+
+---
+
+## 🪜 Step-by-Step Guide
+
+> ✅ Assumes you're inside a Django project (`projects`)
+
+---
+
+### **Step 1: Create App**
+
+```bash
+python manage.py startapp accounts
+```
+
+---
+
+### **Step 2: Register App**
+
+In `projects/settings.py`:
+
+```python
+INSTALLED_APPS = [
+    ...
+    'accounts',
+]
+```
+
+---
+
+### **Step 3: Set Up URLs**
+
+In `accounts/urls.py`:
+
+```python
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    path('register/', views.register_view, name='register'),
+    path('login/', views.login_view, name='login'),
+    path('logout/', views.logout_view, name='logout'),
+]
+```
+
+In `projects/urls.py`, include:
+
+```python
+path('accounts/', include('accounts.urls')),
+```
+
+---
+
+### **Step 4: Create Forms**
+
+In `accounts/forms.py`:
+
+```python
+from django import forms
+from django.contrib.auth.models import User
+from django.contrib.auth.forms import AuthenticationForm
+
+class RegisterForm(forms.ModelForm):
+    password = forms.CharField(widget=forms.PasswordInput)
+    confirm_password = forms.CharField(widget=forms.PasswordInput)
+
+    class Meta:
+        model = User
+        fields = ['username', 'email', 'password']
+
+    def clean(self):
+        cleaned_data = super().clean()
+        pw = cleaned_data.get("password")
+        cpw = cleaned_data.get("confirm_password")
+
+        if pw != cpw:
+            raise forms.ValidationError("Passwords do not match.")
+```
+
+---
+
+### **Step 5: Create Views**
+
+In `accounts/views.py`:
+
+```python
+from django.shortcuts import render, redirect
+from django.contrib.auth import login, logout, authenticate
+from django.contrib.auth.forms import AuthenticationForm
+from .forms import RegisterForm
+
+def register_view(request):
+    if request.method == 'POST':
+        form = RegisterForm(request.POST)
+        if form.is_valid():
+            user = form.save(commit=False)
+            user.set_password(form.cleaned_data['password'])  # Hash password
+            user.save()
+            login(request, user)
+            return redirect('home')  # Update this as needed
+    else:
+        form = RegisterForm()
+    return render(request, 'accounts/register.html', {'form': form})
+
+def login_view(request):
+    if request.method == 'POST':
+        form = AuthenticationForm(request, data=request.POST)
+        if form.is_valid():
+            user = form.get_user()
+            login(request, user)
+            return redirect('home')  # Update this as needed
+    else:
+        form = AuthenticationForm()
+    return render(request, 'accounts/login.html', {'form': form})
+
+def logout_view(request):
+    logout(request)
+    return redirect('login')
+```
+
+---
+
+### **Step 6: Create Templates**
+
+Inside `accounts/templates/accounts/`:
+
+#### 📄 `register.html`
+
+```html
+<h2>Register</h2>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Register</button>
+</form>
+<a href="{% url 'login' %}">Already have an account? Login</a>
+```
+
+#### 📄 `login.html`
+
+```html
+<h2>Login</h2>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Login</button>
+</form>
+<a href="{% url 'register' %}">Create new account</a>
+```
+
+> 💡 Optional: Add a simple `home` view/template to redirect after login/registration.
+
+---
+
+### **Step 7: Add Login Redirect Settings**
+
+In `settings.py`:
+
+```python
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = 'home'
+LOGOUT_REDIRECT_URL = 'login'
+```
+
+---
+
+### **Step 8: Add Home View (Optional)**
+
+In any app (e.g., `taskmanager/views.py` or a new app):
+
+```python
+from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
+
+@login_required
+def home_view(request):
+    return render(request, 'home.html')
+```
+
+In `projects/urls.py`:
+
+```python
+from your_app.views import home_view
+path('', home_view, name='home'),
+```
+
+Create a simple `home.html`:
+
+```html
+<h2>Welcome, {{ request.user.username }}!</h2>
+<a href="{% url 'logout' %}">Logout</a>
+```
+
+---
+
+### ✅ Final URLs Summary
+
+| URL                   | View                    |
+| --------------------- | ----------------------- |
+| `/accounts/register/` | Register new user       |
+| `/accounts/login/`    | Login existing user     |
+| `/accounts/logout/`   | Logout current user     |
+| `/`                   | Home page (after login) |
+
+---
+
+## ✅ Summary
+
+| Feature   | Implemented With                    |
+| --------- | ----------------------------------- |
+| Register  | Custom form + Django User model     |
+| Login     | Built-in `AuthenticationForm`       |
+| Logout    | `logout()` function                 |
+| Passwords | Hashed via `set_password()`         |
+| Sessions  | Handled by Django `auth` middleware |
+
+---
+
+Would you like to include **email verification**, **password reset**, or **restrict views by login status** next?
+

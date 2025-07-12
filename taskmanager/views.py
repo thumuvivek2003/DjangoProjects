@@ -1,6 +1,12 @@
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 from django.urls import reverse_lazy
 from .models import Task
+from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
+
+@login_required
+def home_view(request):
+    return render(request, 'taskmanager/home.html')
 
 class TaskListView(ListView):
     model = Task

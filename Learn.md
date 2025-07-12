@@ -14,3 +14,7 @@ Hi, i am learning django with project based , so currently I want to learn || 4 
 
 Hi, i am learning django with project based , so currently I want to learn | 5  | Task Manager            | Create, update, delete tasks          | CBVs, CRUD, Django ORM                               | as I am beginnner please give me  code regarding above and guide me with the steps please with start app contactForm
 
+
+Hi, i am learning django with project based , so currently I want to learn | 6  | User Auth System        | Login, Register, Logout               | `auth` module, sessions, hashing                     | as I am beginnner please give me  code regarding above and guide me with the steps please with start app 
+
+

@@ -42,7 +42,8 @@ INSTALLED_APPS = [
     'portfolio',
     'BlogApp',
     'contactForm',
-    'taskmanager'
+    'taskmanager',
+    'accounts',
 ]
 
 MIDDLEWARE = [
@@ -135,3 +136,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 #Custom Things :
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 EMAIL_HOST_USER = 'thumuvivek2003@gmail.com'
+
+
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = 'home'
+LOGOUT_REDIRECT_URL = 'login'
