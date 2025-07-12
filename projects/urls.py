@@ -11,4 +11,5 @@ urlpatterns = [
     path('contact/', include('contactForm.urls')),
     path('tasks/', include('taskmanager.urls')),
     path('accounts/', include('accounts.urls')),
+    path('notes/', include('notes.urls')),
 ]

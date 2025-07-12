@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'contactForm',
     'taskmanager',
     'accounts',
+    'notes',
 ]
 
 MIDDLEWARE = [
