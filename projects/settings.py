@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'hello',
     'portfolio',
     'BlogApp',
+    'contactForm',
 ]
 
 MIDDLEWARE = [
@@ -127,3 +128,9 @@ STATICFILES_DIRS = [
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+
+#Custom Things :
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+EMAIL_HOST_USER = 'thumuvivek2003@gmail.com'
