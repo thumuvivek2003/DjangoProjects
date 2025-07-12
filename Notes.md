@@ -1077,3 +1077,238 @@ Submit the form and check your console for the "sent" email.
 Would you like me to show how to test this with real email (Gmail SMTP or others), or continue to the next project step?
 
 
+#  5  | Task Manager            | Create, update, delete tasks          | CBVs, CRUD, Django ORM   
+Great progress! You're now on **Step 5: Task Manager**, which introduces:
+
+* **CBVs** (Class-Based Views)
+* Full **CRUD** operations
+* Use of **Django ORM**
+
+However, since this is a **Task Manager**, it's better to create a new app named: `taskmanager` (instead of reusing `contactForm`).
+
+---
+
+## ✅ Project Overview
+
+| Feature  | Description                         |
+| -------- | ----------------------------------- |
+| App Name | `taskmanager`                       |
+| Goal     | Create, view, update, delete tasks  |
+| Concepts | CBVs, CRUD, ORM                     |
+| Model    | Task: title, description, completed |
+
+---
+
+## 🪜 Step-by-Step Guide
+
+> ✅ Assumes Django project `projects` is already set up.
+
+---
+
+### **Step 1: Create App**
+
+```bash
+python manage.py startapp taskmanager
+```
+
+---
+
+### **Step 2: Register App**
+
+In `projects/settings.py`, add `'taskmanager'` to `INSTALLED_APPS`:
+
+```python
+INSTALLED_APPS = [
+    ...
+    'taskmanager',
+]
+```
+
+---
+
+### **Step 3: Create Task Model**
+
+In `taskmanager/models.py`:
+
+```python
+from django.db import models
+
+class Task(models.Model):
+    title = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    completed = models.BooleanField(default=False)
+
+    def __str__(self):
+        return self.title
+```
+
+---
+
+### **Step 4: Migrate**
+
+```bash
+python manage.py makemigrations
+python manage.py migrate
+```
+
+---
+
+### **Step 5: Create URLs**
+
+In `taskmanager/urls.py`:
+
+```python
+from django.urls import path
+from .views import TaskListView, TaskCreateView, TaskUpdateView, TaskDeleteView
+
+urlpatterns = [
+    path('', TaskListView.as_view(), name='task_list'),
+    path('create/', TaskCreateView.as_view(), name='task_create'),
+    path('<int:pk>/edit/', TaskUpdateView.as_view(), name='task_edit'),
+    path('<int:pk>/delete/', TaskDeleteView.as_view(), name='task_delete'),
+]
+```
+
+In `projects/urls.py`:
+
+```python
+from django.urls import path, include
+
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('tasks/', include('taskmanager.urls')),  # 👈 Add this
+]
+```
+
+---
+
+### **Step 6: Create CBVs (Class-Based Views)**
+
+In `taskmanager/views.py`:
+
+```python
+from django.views.generic import ListView, CreateView, UpdateView, DeleteView
+from django.urls import reverse_lazy
+from .models import Task
+
+class TaskListView(ListView):
+    model = Task
+    template_name = 'taskmanager/task_list.html'
+    context_object_name = 'tasks'
+
+class TaskCreateView(CreateView):
+    model = Task
+    fields = ['title', 'description', 'completed']
+    template_name = 'taskmanager/task_form.html'
+    success_url = reverse_lazy('task_list')
+
+class TaskUpdateView(UpdateView):
+    model = Task
+    fields = ['title', 'description', 'completed']
+    template_name = 'taskmanager/task_form.html'
+    success_url = reverse_lazy('task_list')
+
+class TaskDeleteView(DeleteView):
+    model = Task
+    template_name = 'taskmanager/task_confirm_delete.html'
+    success_url = reverse_lazy('task_list')
+```
+
+---
+
+### **Step 7: Create Templates**
+
+Create directory: `taskmanager/templates/taskmanager/`
+
+#### 📄 `task_list.html`
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Tasks</title>
+</head>
+<body>
+    <h1>Task List</h1>
+    <a href="{% url 'task_create' %}">+ Add New Task</a>
+    <ul>
+        {% for task in tasks %}
+            <li>
+                <strong>{{ task.title }}</strong> - 
+                {% if task.completed %}✅{% else %}❌{% endif %}<br>
+                <a href="{% url 'task_edit' task.pk %}">Edit</a> | 
+                <a href="{% url 'task_delete' task.pk %}">Delete</a>
+            </li>
+        {% empty %}
+            <li>No tasks available.</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
+```
+
+#### 📄 `task_form.html`
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Create / Edit Task</title>
+</head>
+<body>
+    <h1>Create / Edit Task</h1>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Save</button>
+    </form>
+    <a href="{% url 'task_list' %}">Back</a>
+</body>
+</html>
+```
+
+#### 📄 `task_confirm_delete.html`
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Delete Task</title>
+</head>
+<body>
+    <h1>Delete Task</h1>
+    <p>Are you sure you want to delete "{{ object.title }}"?</p>
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit">Yes, delete</button>
+    </form>
+    <a href="{% url 'task_list' %}">Cancel</a>
+</body>
+</html>
+```
+
+---
+
+### **Step 8: Run the Server**
+
+```bash
+python manage.py runserver
+```
+
+Visit: [http://127.0.0.1:8000/tasks/](http://127.0.0.1:8000/tasks/)
+
+---
+
+## ✅ Summary
+
+| Feature   | Location                          |
+| --------- | --------------------------------- |
+| Model     | `Task` in `models.py`             |
+| CBVs      | `views.py`: ListView, CreateView… |
+| CRUD URLs | `taskmanager/urls.py`             |
+| Templates | List, Form, Confirm Delete HTML   |
+| ORM Used  | For all DB interactions           |
+
+---
+
+Would you like to include **login/logout and user-specific tasks** next, or move on to the next project in your learning plan?

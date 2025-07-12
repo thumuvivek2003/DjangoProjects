@@ -7,4 +7,5 @@ urlpatterns = [
     path('portfolio/', include('portfolio.urls')),
     path('blog/', include('BlogApp.urls')),
     path('contact/', include('contactForm.urls')),
+    path('tasks/', include('taskmanager.urls')),
 ]

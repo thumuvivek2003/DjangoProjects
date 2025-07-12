@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'portfolio',
     'BlogApp',
     'contactForm',
+    'taskmanager'
 ]
 
 MIDDLEWARE = [
