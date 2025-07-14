@@ -1,0 +1,8 @@
+<h2>Available Polls</h2>
+<ul>
+    {% for q in questions %}
+        <li><a href="{% url 'detail' q.id %}">{{ q.question_text }}</a></li>
+    {% empty %}
+        <li>No polls yet.</li>
+    {% endfor %}
+</ul>

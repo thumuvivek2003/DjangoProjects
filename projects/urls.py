@@ -17,6 +17,7 @@ urlpatterns = [
     path('gallery/', include('gallery.urls')),
     path('todoapi/', include('todoapi.urls')),
     path('weather/', include('weather.urls')),
+    path('polls/', include('polls.urls')),
 ]
 
 

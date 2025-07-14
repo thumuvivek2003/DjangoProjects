@@ -2377,3 +2377,7 @@ Visit: [http://127.0.0.1:8000/weather/](http://127.0.0.1:8000/weather/)
 ---
 
 Would you like to add **city input**, **chart display with Chart.js**, or make it support **dynamic coordinates** next?
+
+
+# 11 : Polls App               | Voting and displaying results         | Relationships, Aggregation, Template logic  
+Hi, i am learning django with project based , so currently I want to learn | 11 | Polls App               | Voting and displaying results         | Relationships, Aggregation, Template logic           | as I am beginnner please give me  code regarding above and guide me with the steps please with start app 

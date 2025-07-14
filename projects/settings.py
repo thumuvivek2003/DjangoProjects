@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'gallery',
     'todoapi',
     'weather',
+    'polls',
 ]
 
 MIDDLEWARE = [
