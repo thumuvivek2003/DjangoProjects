@@ -21,5 +21,8 @@ Hi, i am learning django with project based , so currently I want to learn | 6  
 Hi, i am learning django with project based , so currently I want to learn | 7  | Notes App               | Notes for each user only              | ForeignKeys, user access control                     | as I am beginnner please give me  code regarding above and guide me with the steps please with start app 
 
 
+Hi, i am learning django with project based , so currently I want to learn | 8  | Image Gallery           | Upload and display images             | File uploads, `ImageField`, media settings           | as I am beginnner please give me  code regarding above and guide me with the steps please with start app 
+
+
 
 
