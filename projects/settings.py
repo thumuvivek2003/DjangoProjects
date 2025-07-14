@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'rest_framework',
     'hello',
     'portfolio',
     'BlogApp',
@@ -45,7 +46,8 @@ INSTALLED_APPS = [
     'taskmanager',
     'accounts',
     'notes',
-    'gallery'
+    'gallery',
+    'todoapi'
 ]
 
 MIDDLEWARE = [

@@ -2031,3 +2031,193 @@ pip install pillow
 
 Would you like to add **image deletion**, **user-specific galleries**, or **image resizing/thumbnails** next?
 
+
+# 9 Todo API 
+Hi, i am learning django with project based , so currently I want to learn | 9  | Todo API                | RESTful To-do backend                 | Django REST Framework, serializers                   | as I am beginnner please give me  code regarding above and guide me with the steps please with start app 
+
+Awesome! You’re now stepping into **Django REST Framework (DRF)** with a **RESTful To-Do API** — a crucial skill for building backends for frontend frameworks like React or mobile apps.
+
+---
+
+## ✅ Project Overview
+
+| Feature      | Description                       |
+| ------------ | --------------------------------- |
+| App Name     | `todoapi`                         |
+| Goal         | Create a REST API for to-do items |
+| Key Concepts | DRF, Serializers, API Views, CRUD |
+
+---
+
+## 🪜 Step-by-Step Guide
+
+> ✅ Assumes you have a Django project (`projects`) and a virtual environment.
+
+---
+
+### **Step 1: Install DRF**
+
+```bash
+pip install djangorestframework
+```
+
+In `projects/settings.py`, add `'rest_framework'`:
+
+```python
+INSTALLED_APPS = [
+    ...
+    'rest_framework',
+    'todoapi',
+]
+```
+
+---
+
+### **Step 2: Create App**
+
+```bash
+python manage.py startapp todoapi
+```
+
+---
+
+### **Step 3: Create the Model**
+
+In `todoapi/models.py`:
+
+```python
+from django.db import models
+
+class Todo(models.Model):
+    title = models.CharField(max_length=200)
+    completed = models.BooleanField(default=False)
+
+    def __str__(self):
+        return self.title
+```
+
+---
+
+### **Step 4: Migrate**
+
+```bash
+python manage.py makemigrations
+python manage.py migrate
+```
+
+---
+
+### **Step 5: Create Serializer**
+
+In `todoapi/serializers.py`:
+
+```python
+from rest_framework import serializers
+from .models import Todo
+
+class TodoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Todo
+        fields = '__all__'
+```
+
+---
+
+### **Step 6: Create API Views**
+
+In `todoapi/views.py`:
+
+```python
+from rest_framework import generics
+from .models import Todo
+from .serializers import TodoSerializer
+
+class TodoListCreateAPIView(generics.ListCreateAPIView):
+    queryset = Todo.objects.all()
+    serializer_class = TodoSerializer
+
+class TodoRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Todo.objects.all()
+    serializer_class = TodoSerializer
+```
+
+---
+
+### **Step 7: Create URLs**
+
+In `todoapi/urls.py`:
+
+```python
+from django.urls import path
+from .views import TodoListCreateAPIView, TodoRetrieveUpdateDestroyAPIView
+
+urlpatterns = [
+    path('todos/', TodoListCreateAPIView.as_view(), name='todo_list_create'),
+    path('todos/<int:pk>/', TodoRetrieveUpdateDestroyAPIView.as_view(), name='todo_detail'),
+]
+```
+
+In `projects/urls.py`:
+
+```python
+from django.urls import path, include
+
+urlpatterns = [
+    ...
+    path('api/', include('todoapi.urls')),
+]
+```
+
+---
+
+### **Step 8: Run Server and Test**
+
+```bash
+python manage.py runserver
+```
+
+* 📘 List/Create Todos: [http://127.0.0.1:8000/api/todos/](http://127.0.0.1:8000/api/todos/)
+* 📘 Retrieve/Update/Delete: [http://127.0.0.1:8000/api/todos/1/](http://127.0.0.1:8000/api/todos/1/)
+
+> You can use Postman, cURL, or the built-in DRF web UI.
+
+---
+
+## ✅ Example JSON
+
+### ➕ POST `/api/todos/`
+
+```json
+{
+  "title": "Learn DRF",
+  "completed": false
+}
+```
+
+### ✔ GET `/api/todos/`
+
+```json
+[
+  {
+    "id": 1,
+    "title": "Learn DRF",
+    "completed": false
+  }
+]
+```
+
+---
+
+## ✅ Summary
+
+| Feature    | Where                                               |
+| ---------- | --------------------------------------------------- |
+| Model      | `todoapi/models.py`                                 |
+| Serializer | `todoapi/serializers.py`                            |
+| Views      | `ListCreateAPIView`, `RetrieveUpdateDestroyAPIView` |
+| URLs       | `api/todos/`, `api/todos/<pk>/`                     |
+| Tools      | Django REST Framework                               |
+
+---
+
+Would you like to add **authentication**, **pagination**, or connect this to a **React frontend** next?
