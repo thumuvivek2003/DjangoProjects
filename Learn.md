@@ -26,3 +26,4 @@ Hi, i am learning django with project based , so currently I want to learn | 8  
 
 Hi, i am learning django with project based , so currently I want to learn | 9  | Todo API                | RESTful To-do backend                 | Django REST Framework, serializers                   | as I am beginnner please give me  code regarding above and guide me with the steps please with start app 
 
+Hi, i am learning django with project based , so currently I want to learn | 10 | Weather App             | Fetch weather using API               | External APIs, requests library                      | as I am beginnner please give me  code regarding above and guide me with the steps please with start app 

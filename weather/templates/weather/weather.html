@@ -1,0 +1,13 @@
+<h2>Tokyo Weather Forecast (Next 12 Hours)</h2>
+<table border="1" cellpadding="5">
+    <tr>
+        <th>Time</th>
+        <th>Temperature (°C)</th>
+    </tr>
+    {% for time, temp in forecast %}
+        <tr>
+            <td>{{ time }}</td>
+            <td>{{ temp }}</td>
+        </tr>
+    {% endfor %}
+</table>

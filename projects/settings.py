@@ -47,7 +47,8 @@ INSTALLED_APPS = [
     'accounts',
     'notes',
     'gallery',
-    'todoapi'
+    'todoapi',
+    'weather',
 ]
 
 MIDDLEWARE = [

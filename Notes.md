@@ -2221,3 +2221,159 @@ python manage.py runserver
 ---
 
 Would you like to add **authentication**, **pagination**, or connect this to a **React frontend** next?
+
+
+# 10 :  Weather App             | Fetch weather using API               | External APIs, requests library       
+Hi, i am learning django with project based , so currently I want to learn | 10 | Weather App             | Fetch weather using API               | External APIs, requests library                      | as I am beginnner please give me  code regarding above and guide me with the steps please with start app  with api https://api.open-meteo.com/v1/forecast?latitude=35.6895&longitude=139.6917&hourly=temperature_2m  
+
+Awesome! You're now on **Step 10: Weather App**, where you'll learn to:
+
+* Use the `requests` library to call an **external API**
+* Parse and display weather data
+* Handle API requests within Django views
+
+We'll use the app name: `weather`.
+
+---
+
+## ✅ API Used
+
+**Open-Meteo API:**
+
+```bash
+https://api.open-meteo.com/v1/forecast?latitude=35.6895&longitude=139.6917&hourly=temperature_2m
+```
+
+This returns hourly temperature for **Tokyo** (`latitude=35.6895`, `longitude=139.6917`).
+
+---
+
+## 🪜 Step-by-Step Guide
+
+---
+
+### **Step 1: Create the App**
+
+```bash
+python manage.py startapp weather
+```
+
+---
+
+### **Step 2: Register the App**
+
+In `projects/settings.py`:
+
+```python
+INSTALLED_APPS = [
+    ...
+    'weather',
+]
+```
+
+---
+
+### **Step 3: Install `requests` Library**
+
+If not installed:
+
+```bash
+pip install requests
+```
+
+---
+
+### **Step 4: Create the View**
+
+In `weather/views.py`:
+
+```python
+import requests
+from django.shortcuts import render
+
+def weather_view(request):
+    url = "https://api.open-meteo.com/v1/forecast"
+    params = {
+        'latitude': 35.6895,
+        'longitude': 139.6917,
+        'hourly': 'temperature_2m'
+    }
+    response = requests.get(url, params=params)
+    data = response.json()
+
+    # Extract first 12 temperature readings (for 12 hours)
+    hourly_times = data['hourly']['time'][:12]
+    hourly_temps = data['hourly']['temperature_2m'][:12]
+
+    forecast = zip(hourly_times, hourly_temps)
+
+    return render(request, 'weather/weather.html', {'forecast': forecast})
+```
+
+---
+
+### **Step 5: Create URLs**
+
+In `weather/urls.py`:
+
+```python
+from django.urls import path
+from .views import weather_view
+
+urlpatterns = [
+    path('', weather_view, name='weather'),
+]
+```
+
+And include in `projects/urls.py`:
+
+```python
+path('weather/', include('weather.urls')),
+```
+
+---
+
+### **Step 6: Create Template**
+
+In `weather/templates/weather/weather.html`:
+
+```html
+<h2>Tokyo Weather Forecast (Next 12 Hours)</h2>
+<table border="1" cellpadding="5">
+    <tr>
+        <th>Time</th>
+        <th>Temperature (°C)</th>
+    </tr>
+    {% for time, temp in forecast %}
+        <tr>
+            <td>{{ time }}</td>
+            <td>{{ temp }}</td>
+        </tr>
+    {% endfor %}
+</table>
+```
+
+---
+
+### **Step 7: Run the Server**
+
+```bash
+python manage.py runserver
+```
+
+Visit: [http://127.0.0.1:8000/weather/](http://127.0.0.1:8000/weather/)
+
+---
+
+## ✅ Summary
+
+| Feature         | Location                                          |
+| --------------- | ------------------------------------------------- |
+| API Integration | `requests.get()` in `views.py`                    |
+| API Source      | [Open-Meteo Forecast API](https://open-meteo.com) |
+| View            | Weather forecast for next 12 hours                |
+| Template        | Renders a simple table with results               |
+
+---
+
+Would you like to add **city input**, **chart display with Chart.js**, or make it support **dynamic coordinates** next?

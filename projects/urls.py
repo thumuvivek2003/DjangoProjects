@@ -16,6 +16,7 @@ urlpatterns = [
     path('notes/', include('notes.urls')),
     path('gallery/', include('gallery.urls')),
     path('todoapi/', include('todoapi.urls')),
+    path('weather/', include('weather.urls')),
 ]
 
 
