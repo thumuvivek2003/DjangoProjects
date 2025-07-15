@@ -19,6 +19,7 @@ urlpatterns = [
     path('weather/', include('weather.urls')),
     path('polls/', include('polls.urls')),
     path('shop/', include('shop2.urls')),
+    path('news/', include('newsapp.urls')),
 ]
 
 

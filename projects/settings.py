@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'django_celery_beat',
     'hello',
     'portfolio',
     'BlogApp',
@@ -51,6 +52,7 @@ INSTALLED_APPS = [
     'weather',
     'polls',
     'shop2',
+    'newsapp'
 ]
 
 MIDDLEWARE = [
@@ -153,4 +155,9 @@ LOGOUT_REDIRECT_URL = 'login'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+
+CELERY_BROKER_URL = 'redis://localhost:6379/0'  # Or use RabbitMQ
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+
 

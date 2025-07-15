@@ -30,3 +30,7 @@ Hi, i am learning django with project based , so currently I want to learn | 10 
 
 
 Hi, i am learning django with project based , so currently I want to learn | 11 | Polls App               | Voting and displaying results         | Relationships, Aggregation, Template logic           | as I am beginnner please give me  code regarding above and guide me with the steps please with start app 
+
+
+Hi, i am learning django with project based , so currently I want to learn | 13 | News Aggregator         | Scrape and show news                  | BeautifulSoup, Celery, cron jobs                     | as I am beginnner please give me  code regarding above and guide me with the steps please with start app 
+
