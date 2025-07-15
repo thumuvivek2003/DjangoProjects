@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     'todoapi',
     'weather',
     'polls',
+    'shop2',
 ]
 
 MIDDLEWARE = [
