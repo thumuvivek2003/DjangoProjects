@@ -3749,7 +3749,7 @@ This complete news aggregator will scrape news from multiple sources, display th
 Hi, i am learning django with project based , so currently I want to learn | 14 | Chat App                | Simple room-based chat                | WebSockets, Django Channels                          | as I am beginnner please give me  code regarding above and guide me as i have already created django admin app with name  'projects' so  with in it  steps  with start app
 
 
-# Django Chat App with WebSockets - Complete Guide
+##  Django Chat App with WebSockets - Complete Guide
 
 ## Step 1: Create the Chat App
 
@@ -4636,3 +4636,1377 @@ class RoomMemberAdmin(admin.ModelAdmin):
 10. **Message encryption**: End-to-end encryption
 
 This chat application provides a solid foundation for real-time communication and demonstrates key concepts like WebSockets, Django Channels, and asynchronous programming!
+
+
+
+# 15 | Job Board               | Post and apply for jobs               | Advanced models, relations, email                    |
+# Django Job Board - Complete Guide
+
+## Step 1: Create the App
+
+First, navigate to your project directory and create the job board app:
+
+```bash
+cd projects
+python manage.py startapp jobboard
+```
+
+## Step 2: Add App to Settings
+
+In `projects/settings.py`, add the app to `INSTALLED_APPS`:
+
+```python
+INSTALLED_APPS = [
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'jobboard',  # Add this line
+]
+```
+
+## Step 3: Create Models
+
+Create `jobboard/models.py`:
+
+```python
+from django.db import models
+from django.contrib.auth.models import User
+from django.urls import reverse
+from django.utils import timezone
+
+class Company(models.Model):
+    name = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    website = models.URLField(blank=True)
+    logo = models.ImageField(upload_to='company_logos/', blank=True)
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name_plural = "Companies"
+    
+    def __str__(self):
+        return self.name
+
+class JobCategory(models.Model):
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True)
+    
+    class Meta:
+        verbose_name_plural = "Job Categories"
+    
+    def __str__(self):
+        return self.name
+
+class Job(models.Model):
+    JOB_TYPES = [
+        ('full_time', 'Full Time'),
+        ('part_time', 'Part Time'),
+        ('contract', 'Contract'),
+        ('internship', 'Internship'),
+        ('remote', 'Remote'),
+    ]
+    
+    EXPERIENCE_LEVELS = [
+        ('entry', 'Entry Level'),
+        ('mid', 'Mid Level'),
+        ('senior', 'Senior Level'),
+        ('lead', 'Lead/Manager'),
+    ]
+    
+    title = models.CharField(max_length=200)
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='jobs')
+    category = models.ForeignKey(JobCategory, on_delete=models.SET_NULL, null=True)
+    description = models.TextField()
+    requirements = models.TextField()
+    salary_min = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    salary_max = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    job_type = models.CharField(max_length=20, choices=JOB_TYPES, default='full_time')
+    experience_level = models.CharField(max_length=20, choices=EXPERIENCE_LEVELS, default='entry')
+    location = models.CharField(max_length=200)
+    is_active = models.BooleanField(default=True)
+    application_deadline = models.DateTimeField()
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.title} at {self.company.name}"
+    
+    def get_absolute_url(self):
+        return reverse('job_detail', kwargs={'pk': self.pk})
+    
+    def is_deadline_passed(self):
+        return timezone.now() > self.application_deadline
+
+class JobApplication(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('reviewing', 'Under Review'),
+        ('shortlisted', 'Shortlisted'),
+        ('interviewed', 'Interviewed'),
+        ('rejected', 'Rejected'),
+        ('hired', 'Hired'),
+    ]
+    
+    job = models.ForeignKey(Job, on_delete=models.CASCADE, related_name='applications')
+    applicant = models.ForeignKey(User, on_delete=models.CASCADE)
+    cover_letter = models.TextField()
+    resume = models.FileField(upload_to='resumes/')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    applied_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        unique_together = ['job', 'applicant']  # Prevent duplicate applications
+        ordering = ['-applied_at']
+    
+    def __str__(self):
+        return f"{self.applicant.username} applied for {self.job.title}"
+
+class UserProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    bio = models.TextField(blank=True)
+    phone = models.CharField(max_length=20, blank=True)
+    location = models.CharField(max_length=200, blank=True)
+    skills = models.TextField(blank=True, help_text="Comma-separated skills")
+    experience_years = models.IntegerField(default=0)
+    linkedin_url = models.URLField(blank=True)
+    github_url = models.URLField(blank=True)
+    
+    def __str__(self):
+        return f"{self.user.username}'s Profile"
+```
+
+## Step 4: Create Forms
+
+Create `jobboard/forms.py`:
+
+```python
+from django import forms
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.models import User
+from .models import Job, JobApplication, Company, UserProfile
+
+class CustomUserCreationForm(UserCreationForm):
+    email = forms.EmailField(required=True)
+    first_name = forms.CharField(max_length=30, required=True)
+    last_name = forms.CharField(max_length=30, required=True)
+    
+    class Meta:
+        model = User
+        fields = ("username", "first_name", "last_name", "email", "password1", "password2")
+    
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.email = self.cleaned_data["email"]
+        user.first_name = self.cleaned_data["first_name"]
+        user.last_name = self.cleaned_data["last_name"]
+        if commit:
+            user.save()
+        return user
+
+class JobForm(forms.ModelForm):
+    class Meta:
+        model = Job
+        fields = ['title', 'company', 'category', 'description', 'requirements', 
+                 'salary_min', 'salary_max', 'job_type', 'experience_level', 
+                 'location', 'application_deadline']
+        widgets = {
+            'description': forms.Textarea(attrs={'rows': 5}),
+            'requirements': forms.Textarea(attrs={'rows': 5}),
+            'application_deadline': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
+        }
+
+class JobApplicationForm(forms.ModelForm):
+    class Meta:
+        model = JobApplication
+        fields = ['cover_letter', 'resume']
+        widgets = {
+            'cover_letter': forms.Textarea(attrs={'rows': 6, 'placeholder': 'Write your cover letter here...'}),
+        }
+
+class CompanyForm(forms.ModelForm):
+    class Meta:
+        model = Company
+        fields = ['name', 'description', 'website', 'logo']
+        widgets = {
+            'description': forms.Textarea(attrs={'rows': 4}),
+        }
+
+class UserProfileForm(forms.ModelForm):
+    class Meta:
+        model = UserProfile
+        fields = ['bio', 'phone', 'location', 'skills', 'experience_years', 'linkedin_url', 'github_url']
+        widgets = {
+            'bio': forms.Textarea(attrs={'rows': 4}),
+            'skills': forms.Textarea(attrs={'rows': 2, 'placeholder': 'Python, Django, JavaScript, etc.'}),
+        }
+```
+
+## Step 5: Create Views
+
+Create `jobboard/views.py`:
+
+```python
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth import login
+from django.contrib import messages
+from django.core.paginator import Paginator
+from django.db.models import Q
+from django.core.mail import send_mail
+from django.conf import settings
+from django.urls import reverse
+from .models import Job, JobApplication, Company, UserProfile, JobCategory
+from .forms import JobForm, JobApplicationForm, CompanyForm, UserProfileForm, CustomUserCreationForm
+
+def job_list(request):
+    jobs = Job.objects.filter(is_active=True).select_related('company', 'category')
+    
+    # Search functionality
+    search_query = request.GET.get('search')
+    if search_query:
+        jobs = jobs.filter(
+            Q(title__icontains=search_query) | 
+            Q(company__name__icontains=search_query) |
+            Q(location__icontains=search_query)
+        )
+    
+    # Filter by category
+    category_id = request.GET.get('category')
+    if category_id:
+        jobs = jobs.filter(category_id=category_id)
+    
+    # Filter by job type
+    job_type = request.GET.get('job_type')
+    if job_type:
+        jobs = jobs.filter(job_type=job_type)
+    
+    # Pagination
+    paginator = Paginator(jobs, 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    categories = JobCategory.objects.all()
+    
+    context = {
+        'page_obj': page_obj,
+        'categories': categories,
+        'search_query': search_query,
+        'selected_category': category_id,
+        'selected_job_type': job_type,
+    }
+    return render(request, 'jobboard/job_list.html', context)
+
+def job_detail(request, pk):
+    job = get_object_or_404(Job, pk=pk, is_active=True)
+    user_has_applied = False
+    
+    if request.user.is_authenticated:
+        user_has_applied = JobApplication.objects.filter(job=job, applicant=request.user).exists()
+    
+    context = {
+        'job': job,
+        'user_has_applied': user_has_applied,
+    }
+    return render(request, 'jobboard/job_detail.html', context)
+
+@login_required
+def apply_job(request, pk):
+    job = get_object_or_404(Job, pk=pk, is_active=True)
+    
+    # Check if user already applied
+    if JobApplication.objects.filter(job=job, applicant=request.user).exists():
+        messages.warning(request, 'You have already applied for this job.')
+        return redirect('job_detail', pk=pk)
+    
+    # Check if deadline has passed
+    if job.is_deadline_passed():
+        messages.error(request, 'Application deadline has passed.')
+        return redirect('job_detail', pk=pk)
+    
+    if request.method == 'POST':
+        form = JobApplicationForm(request.POST, request.FILES)
+        if form.is_valid():
+            application = form.save(commit=False)
+            application.job = job
+            application.applicant = request.user
+            application.save()
+            
+            # Send email notification
+            try:
+                send_mail(
+                    subject=f'New job application for {job.title}',
+                    message=f'{request.user.first_name} {request.user.last_name} has applied for {job.title}.',
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[job.created_by.email],
+                    fail_silently=True,
+                )
+            except:
+                pass
+            
+            messages.success(request, 'Your application has been submitted successfully!')
+            return redirect('job_detail', pk=pk)
+    else:
+        form = JobApplicationForm()
+    
+    return render(request, 'jobboard/apply_job.html', {'form': form, 'job': job})
+
+@login_required
+def post_job(request):
+    if request.method == 'POST':
+        form = JobForm(request.POST)
+        if form.is_valid():
+            job = form.save(commit=False)
+            job.created_by = request.user
+            job.save()
+            messages.success(request, 'Job posted successfully!')
+            return redirect('job_detail', pk=job.pk)
+    else:
+        form = JobForm()
+    
+    return render(request, 'jobboard/post_job.html', {'form': form})
+
+@login_required
+def my_jobs(request):
+    jobs = Job.objects.filter(created_by=request.user).order_by('-created_at')
+    return render(request, 'jobboard/my_jobs.html', {'jobs': jobs})
+
+@login_required
+def my_applications(request):
+    applications = JobApplication.objects.filter(applicant=request.user).order_by('-applied_at')
+    return render(request, 'jobboard/my_applications.html', {'applications': applications})
+
+@login_required
+def job_applications(request, pk):
+    job = get_object_or_404(Job, pk=pk, created_by=request.user)
+    applications = JobApplication.objects.filter(job=job).order_by('-applied_at')
+    return render(request, 'jobboard/job_applications.html', {'job': job, 'applications': applications})
+
+def register(request):
+    if request.method == 'POST':
+        form = CustomUserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            UserProfile.objects.create(user=user)
+            login(request, user)
+            messages.success(request, 'Registration successful!')
+            return redirect('job_list')
+    else:
+        form = CustomUserCreationForm()
+    
+    return render(request, 'registration/register.html', {'form': form})
+
+@login_required
+def profile(request):
+    profile, created = UserProfile.objects.get_or_create(user=request.user)
+    
+    if request.method == 'POST':
+        form = UserProfileForm(request.POST, instance=profile)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Profile updated successfully!')
+            return redirect('profile')
+    else:
+        form = UserProfileForm(instance=profile)
+    
+    return render(request, 'jobboard/profile.html', {'form': form, 'profile': profile})
+```
+
+## Step 6: Create URLs
+
+Create `jobboard/urls.py`:
+
+```python
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    path('', views.job_list, name='job_list'),
+    path('job/<int:pk>/', views.job_detail, name='job_detail'),
+    path('job/<int:pk>/apply/', views.apply_job, name='apply_job'),
+    path('post-job/', views.post_job, name='post_job'),
+    path('my-jobs/', views.my_jobs, name='my_jobs'),
+    path('my-applications/', views.my_applications, name='my_applications'),
+    path('job/<int:pk>/applications/', views.job_applications, name='job_applications'),
+    path('register/', views.register, name='register'),
+    path('profile/', views.profile, name='profile'),
+]
+```
+
+Update `projects/urls.py`:
+
+```python
+from django.contrib import admin
+from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
+
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('', include('jobboard.urls')),
+    path('accounts/', include('django.contrib.auth.urls')),
+]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+```
+
+## Step 7: Create Templates
+
+Create the following directory structure:
+```
+jobboard/
+├── templates/
+│   ├── jobboard/
+│   │   ├── base.html
+│   │   ├── job_list.html
+│   │   ├── job_detail.html
+│   │   ├── apply_job.html
+│   │   ├── post_job.html
+│   │   ├── my_jobs.html
+│   │   ├── my_applications.html
+│   │   ├── job_applications.html
+│   │   └── profile.html
+│   └── registration/
+│       ├── login.html
+│       └── register.html
+```
+
+## Step 8: Run Migrations
+
+```bash
+python manage.py makemigrations
+python manage.py migrate
+```
+
+## Step 9: Create Admin Configuration
+
+Update `jobboard/admin.py`:
+
+```python
+from django.contrib import admin
+from .models import Job, JobApplication, Company, UserProfile, JobCategory
+
+@admin.register(Company)
+class CompanyAdmin(admin.ModelAdmin):
+    list_display = ['name', 'created_by', 'created_at']
+    search_fields = ['name']
+
+@admin.register(JobCategory)
+class JobCategoryAdmin(admin.ModelAdmin):
+    list_display = ['name']
+    search_fields = ['name']
+
+@admin.register(Job)
+class JobAdmin(admin.ModelAdmin):
+    list_display = ['title', 'company', 'job_type', 'is_active', 'created_at']
+    list_filter = ['job_type', 'is_active', 'created_at']
+    search_fields = ['title', 'company__name']
+
+@admin.register(JobApplication)
+class JobApplicationAdmin(admin.ModelAdmin):
+    list_display = ['applicant', 'job', 'status', 'applied_at']
+    list_filter = ['status', 'applied_at']
+    search_fields = ['applicant__username', 'job__title']
+
+@admin.register(UserProfile)
+class UserProfileAdmin(admin.ModelAdmin):
+    list_display = ['user', 'location', 'experience_years']
+    search_fields = ['user__username', 'location']
+```
+
+## Step 10: Update Settings for Email and Media
+
+Add to `projects/settings.py`:
+
+```python
+import os
+
+# Media files
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# Email settings (for development)
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+DEFAULT_FROM_EMAIL = 'your_email@example.com'
+
+# For production, use:
+# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# EMAIL_HOST = 'smtp.gmail.com'
+# EMAIL_PORT = 587
+# EMAIL_USE_TLS = True
+# EMAIL_HOST_USER = 'your_email@gmail.com'
+# EMAIL_HOST_PASSWORD = 'your_app_password'
+```
+
+## Next Steps
+
+1. Create the HTML templates (I can provide these if needed)
+2. Add CSS styling for better UI
+3. Test the application
+4. Add more features like:
+   - Job bookmarking
+   - Advanced search filters
+   - Email notifications
+   - Job recommendations
+
+This job board includes:
+- User registration and authentication
+- Job posting and management
+- Job applications with file uploads
+- Email notifications
+- User profiles
+- Search and filtering
+- Admin interface
+
+Would you like me to provide the HTML templates or help with any specific part?
+
+
+
+<!-- base.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Job Board{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="{% url 'job_list' %}">
+                <i class="fas fa-briefcase"></i> Job Board
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'job_list' %}">Jobs</a>
+                    </li>
+                    {% if user.is_authenticated %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'post_job' %}">Post Job</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'my_jobs' %}">My Jobs</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'my_applications' %}">My Applications</a>
+                        </li>
+                    {% endif %}
+                </ul>
+                <ul class="navbar-nav">
+                    {% if user.is_authenticated %}
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-user"></i> {{ user.username }}
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="{% url 'profile' %}">Profile</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{% url 'logout' %}">Logout</a></li>
+                            </ul>
+                        </li>
+                    {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'login' %}">Login</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'register' %}">Register</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mt-4">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+
+<!-- job_list.html -->
+{% extends 'jobboard/base.html' %}
+
+{% block title %}Job Listings - Job Board{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-header">
+                <h5>Filter Jobs</h5>
+            </div>
+            <div class="card-body">
+                <form method="get">
+                    <div class="mb-3">
+                        <label for="search" class="form-label">Search</label>
+                        <input type="text" class="form-control" id="search" name="search" value="{{ search_query }}" placeholder="Job title, company, location...">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="category" class="form-label">Category</label>
+                        <select class="form-select" id="category" name="category">
+                            <option value="">All Categories</option>
+                            {% for category in categories %}
+                                <option value="{{ category.id }}" {% if category.id|stringformat:"s" == selected_category %}selected{% endif %}>
+                                    {{ category.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="job_type" class="form-label">Job Type</label>
+                        <select class="form-select" id="job_type" name="job_type">
+                            <option value="">All Types</option>
+                            <option value="full_time" {% if selected_job_type == 'full_time' %}selected{% endif %}>Full Time</option>
+                            <option value="part_time" {% if selected_job_type == 'part_time' %}selected{% endif %}>Part Time</option>
+                            <option value="contract" {% if selected_job_type == 'contract' %}selected{% endif %}>Contract</option>
+                            <option value="internship" {% if selected_job_type == 'internship' %}selected{% endif %}>Internship</option>
+                            <option value="remote" {% if selected_job_type == 'remote' %}selected{% endif %}>Remote</option>
+                        </select>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">Filter</button>
+                    <a href="{% url 'job_list' %}" class="btn btn-secondary">Clear</a>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-9">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2>Job Listings</h2>
+            {% if user.is_authenticated %}
+                <a href="{% url 'post_job' %}" class="btn btn-success">
+                    <i class="fas fa-plus"></i> Post Job
+                </a>
+            {% endif %}
+        </div>
+        
+        {% if page_obj %}
+            {% for job in page_obj %}
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <h5 class="card-title">
+                                    <a href="{% url 'job_detail' job.pk %}" class="text-decoration-none">
+                                        {{ job.title }}
+                                    </a>
+                                </h5>
+                                <p class="text-muted mb-1">
+                                    <i class="fas fa-building"></i> {{ job.company.name }}
+                                </p>
+                                <p class="text-muted mb-1">
+                                    <i class="fas fa-map-marker-alt"></i> {{ job.location }}
+                                </p>
+                                <p class="card-text">{{ job.description|truncatewords:20 }}</p>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <span class="badge bg-secondary">{{ job.get_job_type_display }}</span>
+                                    <span class="badge bg-info">{{ job.get_experience_level_display }}</span>
+                                    {% if job.category %}
+                                        <span class="badge bg-primary">{{ job.category.name }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                {% if job.salary_min and job.salary_max %}
+                                    <p class="text-success fw-bold mb-2">
+                                        ${{ job.salary_min|floatformat:0 }} - ${{ job.salary_max|floatformat:0 }}
+                                    </p>
+                                {% endif %}
+                                <p class="text-muted small">{{ job.created_at|date:"M d, Y" }}</p>
+                                <a href="{% url 'job_detail' job.pk %}" class="btn btn-primary">View Details</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+            
+            <!-- Pagination -->
+            {% if page_obj.has_other_pages %}
+                <nav aria-label="Page navigation">
+                    <ul class="pagination justify-content-center">
+                        {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}{% if selected_job_type %}&job_type={{ selected_job_type }}{% endif %}">Previous</a>
+                            </li>
+                        {% endif %}
+                        
+                        {% for num in page_obj.paginator.page_range %}
+                            {% if page_obj.number == num %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ num }}</span>
+                                </li>
+                            {% else %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}{% if selected_job_type %}&job_type={{ selected_job_type }}{% endif %}">{{ num }}</a>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}{% if selected_job_type %}&job_type={{ selected_job_type }}{% endif %}">Next</a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            {% endif %}
+        {% else %}
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i> No jobs found matching your criteria.
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+<!-- job_detail.html -->
+{% extends 'jobboard/base.html' %}
+
+{% block title %}{{ job.title }} - Job Board{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <h1 class="card-title">{{ job.title }}</h1>
+                        <h5 class="text-muted">
+                            <i class="fas fa-building"></i> {{ job.company.name }}
+                        </h5>
+                    </div>
+                    {% if job.company.logo %}
+                        <img src="{{ job.company.logo.url }}" alt="{{ job.company.name }}" class="img-thumbnail" style="max-width: 100px;">
+                    {% endif %}
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <p><i class="fas fa-map-marker-alt"></i> <strong>Location:</strong> {{ job.location }}</p>
+                        <p><i class="fas fa-clock"></i> <strong>Type:</strong> {{ job.get_job_type_display }}</p>
+                        <p><i class="fas fa-chart-line"></i> <strong>Experience:</strong> {{ job.get_experience_level_display }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        {% if job.salary_min and job.salary_max %}
+                            <p><i class="fas fa-dollar-sign"></i> <strong>Salary:</strong> ${{ job.salary_min|floatformat:0 }} - ${{ job.salary_max|floatformat:0 }}</p>
+                        {% endif %}
+                        {% if job.category %}
+                            <p><i class="fas fa-tag"></i> <strong>Category:</strong> {{ job.category.name }}</p>
+                        {% endif %}
+                        <p><i class="fas fa-calendar"></i> <strong>Deadline:</strong> {{ job.application_deadline|date:"M d, Y H:i" }}</p>
+                    </div>
+                </div>
+                
+                <hr>
+                
+                <div class="mb-4">
+                    <h4>Job Description</h4>
+                    <div class="job-content">{{ job.description|linebreaks }}</div>
+                </div>
+                
+                <div class="mb-4">
+                    <h4>Requirements</h4>
+                    <div class="job-content">{{ job.requirements|linebreaks }}</div>
+                </div>
+                
+                {% if job.company.description %}
+                    <div class="mb-4">
+                        <h4>About {{ job.company.name }}</h4>
+                        <p>{{ job.company.description }}</p>
+                        {% if job.company.website %}
+                            <a href="{{ job.company.website }}" target="_blank" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-external-link-alt"></i> Visit Website
+                            </a>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>Apply for this Job</h5>
+            </div>
+            <div class="card-body">
+                {% if user.is_authenticated %}
+                    {% if user_has_applied %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-check-circle"></i> You have already applied for this job.
+                        </div>
+                        <a href="{% url 'my_applications' %}" class="btn btn-outline-primary">View My Applications</a>
+                    {% elif job.is_deadline_passed %}
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i> Application deadline has passed.
+                        </div>
+                    {% else %}
+                        <a href="{% url 'apply_job' job.pk %}" class="btn btn-success btn-lg w-100">
+                            <i class="fas fa-paper-plane"></i> Apply Now
+                        </a>
+                    {% endif %}
+                {% else %}
+                    <p>Please <a href="{% url 'login' %}">login</a> to apply for this job.</p>
+                    <a href="{% url 'login' %}" class="btn btn-primary">Login</a>
+                    <a href="{% url 'register' %}" class="btn btn-outline-primary">Register</a>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5>Job Details</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Posted:</strong> {{ job.created_at|date:"M d, Y" }}</p>
+                <p><strong>Applications:</strong> {{ job.applications.count }}</p>
+                <p><strong>Job ID:</strong> #{{ job.id }}</p>
+                
+                {% if user == job.created_by %}
+                    <hr>
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'job_applications' job.pk %}" class="btn btn-primary">
+                            <i class="fas fa-users"></i> View Applications ({{ job.applications.count }})
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+<!-- apply_job.html -->
+{% extends 'jobboard/base.html' %}
+
+{% block title %}Apply for {{ job.title }} - Job Board{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h4>Apply for {{ job.title }}</h4>
+                <p class="text-muted mb-0">at {{ job.company.name }}</p>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.cover_letter.id_for_label }}" class="form-label">Cover Letter *</label>
+                        {{ form.cover_letter }}
+                        {% if form.cover_letter.errors %}
+                            <div class="text-danger">{{ form.cover_letter.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.resume.id_for_label }}" class="form-label">Resume *</label>
+                        {{ form.resume }}
+                        {% if form.resume.errors %}
+                            <div class="text-danger">{{ form.resume.errors }}</div>
+                        {% endif %}
+                        <div class="form-text">Upload your resume (PDF, DOC, DOCX files only)</div>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{% url 'job_detail' job.pk %}" class="btn btn-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-paper-plane"></i> Submit Application
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+<!-- post_job.html -->
+{% extends 'jobboard/base.html' %}
+
+{% block title %}Post a Job - Job Board{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h4>Post a New Job</h4>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.title.id_for_label }}" class="form-label">Job Title *</label>
+                                {{ form.title }}
+                                {% if form.title.errors %}
+                                    <div class="text-danger">{{ form.title.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.company.id_for_label }}" class="form-label">Company *</label>
+                                {{ form.company }}
+                                {% if form.company.errors %}
+                                    <div class="text-danger">{{ form.company.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.category.id_for_label }}" class="form-label">Category</label>
+                                {{ form.category }}
+                                {% if form.category.errors %}
+                                    <div class="text-danger">{{ form.category.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.location.id_for_label }}" class="form-label">Location *</label>
+                                {{ form.location }}
+                                {% if form.location.errors %}
+                                    <div class="text-danger">{{ form.location.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.description.id_for_label }}" class="form-label">Job Description *</label>
+                        {{ form.description }}
+                        {% if form.description.errors %}
+                            <div class="text-danger">{{ form.description.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.requirements.id_for_label }}" class="form-label">Requirements *</label>
+                        {{ form.requirements }}
+                        {% if form.requirements.errors %}
+                            <div class="text-danger">{{ form.requirements.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.salary_min.id_for_label }}" class="form-label">Minimum Salary</label>
+                                {{ form.salary_min }}
+                                {% if form.salary_min.errors %}
+                                    <div class="text-danger">{{ form.salary_min.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.salary_max.id_for_label }}" class="form-label">Maximum Salary</label>
+                                {{ form.salary_max }}
+                                {% if form.salary_max.errors %}
+                                    <div class="text-danger">{{ form.salary_max.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.job_type.id_for_label }}" class="form-label">Job Type *</label>
+                                {{ form.job_type }}
+                                {% if form.job_type.errors %}
+                                    <div class="text-danger">{{ form.job_type.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.experience_level.id_for_label }}" class="form-label">Experience Level *</label>
+                                {{ form.experience_level }}
+                                {% if form.experience_level.errors %}
+                                    <div class="text-danger">{{ form.experience_level.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.application_deadline.id_for_label }}" class="form-label">Application Deadline *</label>
+                        {{ form.application_deadline }}
+                        {% if form.application_deadline.errors %}
+                            <div class="text-danger">{{ form.application_deadline.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{% url 'job_list' %}" class="btn btn-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-plus"></i> Post Job
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+<!-- login.html -->
+{% extends 'jobboard/base.html' %}
+
+{% block title %}Login - Job Board{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h4>Login</h4>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.username.id_for_label }}" class="form-label">Username</label>
+                        {{ form.username }}
+                        {% if form.username.errors %}
+                            <div class="text-danger">{{ form.username.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.password.id_for_label }}" class="form-label">Password</label>
+                        {{ form.password }}
+                        {% if form.password.errors %}
+                            <div class="text-danger">{{ form.password.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">Login</button>
+                    </div>
+                </form>
+                
+                <div class="text-center mt-3">
+                    <p>Don't have an account? <a href="{% url 'register' %}">Register here</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+<!-- register.html -->
+{% extends 'jobboard/base.html' %}
+
+{% block title %}Register - Job Board{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h4>Register</h4>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.username.id_for_label }}" class="form-label">Username</label>
+                        {{ form.username }}
+                        {% if form.username.errors %}
+                            <div class="text-danger">{{ form.username.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.first_name.id_for_label }}" class="form-label">First Name</label>
+                                {{ form.first_name }}
+                                {% if form.first_name.errors %}
+                                    <div class="text-danger">{{ form.first_name.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.last_name.id_for_label }}" class="form-label">Last Name</label>
+                                {{ form.last_name }}
+                                {% if form.last_name.errors %}
+                                    <div class="text-danger">{{ form.last_name.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.email.id_for_label }}" class="form-label">Email</label>
+                        {{ form.email }}
+                        {% if form.email.errors %}
+                            <div class="text-danger">{{ form.email.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.password1.id_for_label }}" class="form-label">Password</label>
+                        {{ form.password1 }}
+                        {% if form.password1.errors %}
+                            <div class="text-danger">{{ form.password1.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.password2.id_for_label }}" class="form-label">Confirm Password</label>
+                        {{ form.password2 }}
+                        {% if form.password2.errors %}
+                            <div class="text-danger">{{ form.password2.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">Register</button>
+                    </div>
+                </form>
+                
+                <div class="text-center mt-3">
+                    <p>Already have an account? <a href="{% url 'login' %}">Login here</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+<!-- my_jobs.html -->
+{% extends 'jobboard/base.html' %}
+
+{% block title %}My Jobs - Job Board{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>My Posted Jobs</h2>
+    <a href="{% url 'post_job' %}" class="btn btn-success">
+        <i class="fas fa-plus"></i> Post New Job
+    </a>
+</div>
+
+{% if jobs %}
+    <div class="row">
+        {% for job in jobs %}
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h5 class="card-title">{{ job.title }}</h5>
+                            <span class="badge bg-{% if job.is_active %}success{% else %}secondary{% endif %}">
+                                {% if job.is_active %}Active{% else %}Inactive{% endif %}
+                            </span>
+                        </div>
+                        
+                        <p class="text-muted mb-2">
+                            <i class="fas fa-building"></i> {{ job.company.name }}
+                        </p>
+                        <p class="text-muted mb-2">
+                            <i class="fas fa-map-marker-alt"></i> {{ job.location }}
+                        </p>
+                        <p class="text-muted mb-2">
+                            <i class="fas fa-calendar"></i> Posted: {{ job.created_at|date:"M d, Y" }}
+                        </p>
+                        <p class="text-muted mb-3">
+                            <i class="fas fa-clock"></i> Deadline: {{ job.application_deadline|date:"M d, Y" }}
+                        </p>
+                        
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="text-primary">
+                                <i class="fas fa-users"></i> {{ job.applications.count }} applications
+                            </span>
+                            <div class="btn-group" role="group">
+                                <a href="{% url 'job_detail' job.pk %}" class="btn btn-sm btn-outline-primary">View</a>
+                                <a href="{% url 'job_applications' job.pk %}" class="btn btn-sm btn-primary">
+                                    Applications ({{ job.applications.count }})
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="text-center py-5">
+        <i class="fas fa-briefcase fa-3x text-muted mb-3"></i>
+        <h4 class="text-muted">No jobs posted yet</h4>
+        <p class="text-muted">Start by posting your first job!</p>
+        <a href="{% url 'post_job' %}" class="btn btn-primary">Post Your First Job</a>
+    </div>
+{% endif %}
+{% endblock %}
+
+<!-- my_applications.html -->
+{% extends 'jobboard/base.html' %}
+
+{% block title %}My Applications - Job Board{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">My Job Applications</h2>
+
+{% if applications %}
+    <div class="row">
+        {% for application in applications %}
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h5 class="card-title">{{ application.job.title }}</h5>
+                            <span class="badge bg-{% if application.status == 'pending' %}warning{% elif application.status == 'reviewing' %}info{% elif application.status == 'shortlisted' %}primary{% elif application.status == 'interviewed' %}success{% elif application.status == 'hired' %}success{% else %}danger{% endif %}">
+                                {{ application.get_status_display }}
+                            </span>
+                        </div>
+                        
+                        <p class="text-muted mb-2">
+                            <i class="fas fa-building"></i> {{ application.job.company.name }}
+                        </p>
+                        <p class="text-muted mb-2">
+                            <i class="fas fa-map-marker-alt"></i> {{ application.job.location }}
+                        </p>
+                        <p class="text-muted mb-2">
+                            <i class="fas fa-calendar"></i> Applied: {{ application.applied_at|date:"M d, Y" }}
+                        </p>
+                        <p class="text-muted mb-3">
+                            <i class="fas fa-clock"></i> Last updated: {{ application.updated_at|date:"M d, Y" }}
+                        </p>
+                        
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="badge bg-secondary">{{ application.job.get_job_type_display }}</span>
+                            <a href="{% url 'job_detail' application.job.pk %}" class="btn btn-sm btn-outline-primary">View Job</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="text-center py-5">
+        <i class="fas fa-file-alt fa-3x text-muted mb-3"></i>
+        <h4 class="text-muted">No applications yet</h4>
+        <p class="text-muted">Start applying for jobs to see your applications here!</p>
+        <a href="{% url 'job_list' %}" class="btn btn-primary">Browse Jobs</a>
+    </div>
+{% endif %}
+{% endblock %}
+
+<!-- job_applications.html -->
+{% extends 'jobboard/base.html' %}
+
+{% block title %}Applications for {{ job.title }} - Job Board{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2>Applications for {{ job.title }}</h2>
+        <p class="text-muted">{{ job.company.name }} • {{ applications.count }} applications</p>
+    </div>
+    <a href="{% url 'job_detail' job.pk %}" class="btn btn-outline-primary">View Job</a>
+</div>
+
+{% if applications %}
+    <div class="row">
+        {% for application in applications %}
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div>
+                                <h5 class="card-title">{{ application.applicant.first_name }} {{ application.applicant.last_name }}</h5>
+                                <p class="text-muted mb-1">{{ application.applicant.email }}</p>
+                            </div>
+                            <span class="badge bg-{% if application.status == 'pending' %}warning{% elif application.status == 'reviewing' %}info{% elif application.status == 'shortlisted' %}primary{% elif application.status == 'interviewed' %}success{% elif application.status == 'hired' %}success{% else %}danger{% endif %}">
+                                {{ application.get_status_display }}
+                            </span>
+                        </div>
+                        
+                        <p class="text-muted mb-2">
+                            <i class="fas fa-calendar"></i> Applied: {{ application.applied_at|date:"M d, Y H:i" }}
+                        </p>
+                        
+                        <div class="mb-3">
+                            <strong>Cover Letter:</strong>
+                            <p class="text-muted small">{{ application.cover_letter|truncatewords:30 }}</p>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between align-items-center">
+                            {% if application.resume %}
+                                <a href="{{ application.resume.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-file-download"></i> Download Resume
+                                </a>
+                            {% endif %}
+                            <div class="btn-group" role="group">
+                                <button class="btn btn-sm btn-outline-success" onclick="updateStatus({{ application.id }}, 'shortlisted')">Shortlist</button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="updateStatus({{ application.id }}, 'rejected')">Reject</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="text-center py-5">
+        <i class="fas fa-users fa-3x text-muted mb-3"></i>
+        <h4 class="text-muted">No applications yet</h4>
+        <p class="text-muted">Applications will appear here when candidates apply for this job.</p>
+    </div>
+{% endif %}
+
+<script>
+function updateStatus(applicationId, status) {
+    // This would need to be implemented with AJAX
+    // For now, it's just a placeholder
+    alert('Status update functionality would be implemented here');
+}
+</script>
+{% endblock %}
+

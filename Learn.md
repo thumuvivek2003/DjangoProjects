@@ -41,6 +41,9 @@ Hi, i am learning django with project based , so currently I want to learn | 13 
 Hi, i am learning django with project based , so currently I want to learn | 14 | Chat App                | Simple room-based chat                | WebSockets, Django Channels                          | as I am beginnner please give me  code regarding above and guide me as i have already created django admin app with name  'projects' so  with in it  steps  with start app
 
 
+Hi, i am learning django with project based , so currently I want to learn | 15 | Job Board               | Post and apply for jobs               | Advanced models, relations, email                    | as I am beginnner please give me  code regarding above and guide me as i have already created django admin app with name  'projects' so  with in it  steps  with start app
+
+
 
 
 

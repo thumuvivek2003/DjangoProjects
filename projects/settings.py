@@ -55,7 +55,8 @@ INSTALLED_APPS = [
     'newsapp',
     'news_aggregator',
     'channels',
-    'chat',      
+    'chat',     
+    'jobboard', 
 ]
 
 MIDDLEWARE = [
@@ -148,6 +149,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 #Custom Things :
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 EMAIL_HOST_USER = 'thumuvivek2003@gmail.com'
+DEFAULT_FROM_EMAIL = 'thumuvivek2003@example.com'
 
 
 LOGIN_URL = 'login'

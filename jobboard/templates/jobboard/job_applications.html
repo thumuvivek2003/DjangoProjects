@@ -1,0 +1,70 @@
+{% extends 'jobboard/base.html' %}
+
+{% block title %}Applications for {{ job.title }} - Job Board{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2>Applications for {{ job.title }}</h2>
+        <p class="text-muted">{{ job.company.name }} • {{ applications.count }} applications</p>
+    </div>
+    <a href="{% url 'job_detail' job.pk %}" class="btn btn-outline-primary">View Job</a>
+</div>
+
+{% if applications %}
+    <div class="row">
+        {% for application in applications %}
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div>
+                                <h5 class="card-title">{{ application.applicant.first_name }} {{ application.applicant.last_name }}</h5>
+                                <p class="text-muted mb-1">{{ application.applicant.email }}</p>
+                            </div>
+                            <span class="badge bg-{% if application.status == 'pending' %}warning{% elif application.status == 'reviewing' %}info{% elif application.status == 'shortlisted' %}primary{% elif application.status == 'interviewed' %}success{% elif application.status == 'hired' %}success{% else %}danger{% endif %}">
+                                {{ application.get_status_display }}
+                            </span>
+                        </div>
+                        
+                        <p class="text-muted mb-2">
+                            <i class="fas fa-calendar"></i> Applied: {{ application.applied_at|date:"M d, Y H:i" }}
+                        </p>
+                        
+                        <div class="mb-3">
+                            <strong>Cover Letter:</strong>
+                            <p class="text-muted small">{{ application.cover_letter|truncatewords:30 }}</p>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between align-items-center">
+                            {% if application.resume %}
+                                <a href="{{ application.resume.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-file-download"></i> Download Resume
+                                </a>
+                            {% endif %}
+                            <div class="btn-group" role="group">
+                                <button class="btn btn-sm btn-outline-success" onclick="updateStatus({{ application.id }}, 'shortlisted')">Shortlist</button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="updateStatus({{ application.id }}, 'rejected')">Reject</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="text-center py-5">
+        <i class="fas fa-users fa-3x text-muted mb-3"></i>
+        <h4 class="text-muted">No applications yet</h4>
+        <p class="text-muted">Applications will appear here when candidates apply for this job.</p>
+    </div>
+{% endif %}
+
+<script>
+function updateStatus(applicationId, status) {
+    // This would need to be implemented with AJAX
+    // For now, it's just a placeholder
+    alert('Status update functionality would be implemented here');
+}
+</script>
+{% endblock %}

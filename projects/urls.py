@@ -22,6 +22,7 @@ urlpatterns = [
     path('news/', include('newsapp.urls')),
     path('news_aggregator/', include('news_aggregator.urls')),
     path('chat/', include('chat.urls')),
+    path('jobs/', include('jobboard.urls')),
 ]
 
 

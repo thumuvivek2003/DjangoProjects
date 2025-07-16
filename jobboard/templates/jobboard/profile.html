@@ -1,0 +1,89 @@
+<!-- profile.html -->
+{% extends 'jobboard/base.html' %}
+
+{% block title %}Profile - Job Board{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h4>Update Profile</h4>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label for="{{ form.bio.id_for_label }}" class="form-label">Bio</label>
+                        {{ form.bio }}
+                        {% if form.bio.errors %}
+                            <div class="text-danger">{{ form.bio.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.phone.id_for_label }}" class="form-label">Phone</label>
+                                {{ form.phone }}
+                                {% if form.phone.errors %}
+                                    <div class="text-danger">{{ form.phone.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.location.id_for_label }}" class="form-label">Location</label>
+                                {{ form.location }}
+                                {% if form.location.errors %}
+                                    <div class="text-danger">{{ form.location.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.skills.id_for_label }}" class="form-label">Skills</label>
+                        {{ form.skills }}
+                        {% if form.skills.errors %}
+                            <div class="text-danger">{{ form.skills.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.experience_years.id_for_label }}" class="form-label">Years of Experience</label>
+                        {{ form.experience_years }}
+                        {% if form.experience_years.errors %}
+                            <div class="text-danger">{{ form.experience_years.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.linkedin_url.id_for_label }}" class="form-label">LinkedIn URL</label>
+                                {{ form.linkedin_url }}
+                                {% if form.linkedin_url.errors %}
+                                    <div class="text-danger">{{ form.linkedin_url.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.github_url.id_for_label }}" class="form-label">GitHub URL</label>
+                                {{ form.github_url }}
+                                {% if form.github_url.errors %}
+                                    <div class="text-danger">{{ form.github_url.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

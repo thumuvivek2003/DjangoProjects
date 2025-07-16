@@ -1,0 +1,63 @@
+{% extends 'jobboard/base.html' %}
+
+{% block title %}My Jobs - Job Board{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>My Posted Jobs</h2>
+    <a href="{% url 'post_job' %}" class="btn btn-success">
+        <i class="fas fa-plus"></i> Post New Job
+    </a>
+</div>
+
+{% if jobs %}
+    <div class="row">
+        {% for job in jobs %}
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h5 class="card-title">{{ job.title }}</h5>
+                            <span class="badge bg-{% if job.is_active %}success{% else %}secondary{% endif %}">
+                                {% if job.is_active %}Active{% else %}Inactive{% endif %}
+                            </span>
+                        </div>
+                        
+                        <p class="text-muted mb-2">
+                            <i class="fas fa-building"></i> {{ job.company.name }}
+                        </p>
+                        <p class="text-muted mb-2">
+                            <i class="fas fa-map-marker-alt"></i> {{ job.location }}
+                        </p>
+                        <p class="text-muted mb-2">
+                            <i class="fas fa-calendar"></i> Posted: {{ job.created_at|date:"M d, Y" }}
+                        </p>
+                        <p class="text-muted mb-3">
+                            <i class="fas fa-clock"></i> Deadline: {{ job.application_deadline|date:"M d, Y" }}
+                        </p>
+                        
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="text-primary">
+                                <i class="fas fa-users"></i> {{ job.applications.count }} applications
+                            </span>
+                            <div class="btn-group" role="group">
+                                <a href="{% url 'job_detail' job.pk %}" class="btn btn-sm btn-outline-primary">View</a>
+                                <a href="{% url 'job_applications' job.pk %}" class="btn btn-sm btn-primary">
+                                    Applications ({{ job.applications.count }})
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="text-center py-5">
+        <i class="fas fa-briefcase fa-3x text-muted mb-3"></i>
+        <h4 class="text-muted">No jobs posted yet</h4>
+        <p class="text-muted">Start by posting your first job!</p>
+        <a href="{% url 'post_job' %}" class="btn btn-primary">Post Your First Job</a>
+    </div>
+{% endif %}
+{% endblock %}
