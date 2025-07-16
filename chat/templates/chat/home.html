@@ -1,0 +1,55 @@
+{% extends 'chat/base.html' %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <div class="text-center mb-4">
+            <h1><i class="fas fa-comments"></i> Welcome to Chat App</h1>
+            <p class="lead">Connect with others in real-time chat rooms</p>
+        </div>
+
+        {% if user.is_authenticated %}
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <a href="{% url 'chat:room_list' %}" class="btn btn-primary btn-lg w-100">
+                        <i class="fas fa-list"></i> Browse Rooms
+                    </a>
+                </div>
+                <div class="col-md-6">
+                    <a href="{% url 'chat:create_room' %}" class="btn btn-success btn-lg w-100">
+                        <i class="fas fa-plus"></i> Create Room
+                    </a>
+                </div>
+            </div>
+
+            <h3>Recent Rooms</h3>
+            <div class="row">
+                {% for room in rooms %}
+                <div class="col-md-6 mb-3">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ room.name }}</h5>
+                            <p class="card-text">{{ room.description|truncatewords:10 }}</p>
+                            <small class="text-muted">Created by {{ room.created_by.username }}</small>
+                            <div class="mt-2">
+                                <a href="{% url 'chat:room_detail' room.name %}" class="btn btn-primary">
+                                    Join Chat
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <p>No chat rooms available. <a href="{% url 'chat:create_room' %}">Create one!</a></p>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="text-center">
+                <p>Please login or register to start chatting</p>
+                <a href="{% url 'admin:login' %}" class="btn btn-primary me-2">Login</a>
+                <a href="{% url 'chat:register' %}" class="btn btn-secondary">Register</a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

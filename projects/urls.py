@@ -21,6 +21,7 @@ urlpatterns = [
     path('shop/', include('shop2.urls')),
     path('news/', include('newsapp.urls')),
     path('news_aggregator/', include('news_aggregator.urls')),
+    path('chat/', include('chat.urls')),
 ]
 
 

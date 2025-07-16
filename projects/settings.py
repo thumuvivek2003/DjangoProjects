@@ -53,7 +53,9 @@ INSTALLED_APPS = [
     'polls',
     'shop2',
     'newsapp',
-    'news_aggregator', 
+    'news_aggregator',
+    'channels',
+    'chat',      
 ]
 
 MIDDLEWARE = [
@@ -178,3 +180,16 @@ CELERY_BEAT_SCHEDULE = {
     },
 }
 
+
+
+ASGI_APPLICATION = 'projects.asgi.application'
+
+# Channel layer configuration (using Redis)
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [('127.0.0.1', 6379)],
+        },
+    },
+}
