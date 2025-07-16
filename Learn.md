@@ -44,6 +44,8 @@ Hi, i am learning django with project based , so currently I want to learn | 14 
 Hi, i am learning django with project based , so currently I want to learn | 15 | Job Board               | Post and apply for jobs               | Advanced models, relations, email                    | as I am beginnner please give me  code regarding above and guide me as i have already created django admin app with name  'projects' so  with in it  steps  with start app
 
 
+Hi, i am learning django with project based , so currently I want to learn | 16 | Resume Builder          | Form to generate PDF resume           | ReportLab/WeasyPrint, PDF export                     | as I am beginnner please give me  code regarding above and guide me as i have already created project with name  'projects' so  with in it  steps  with start app
+
 
 
 

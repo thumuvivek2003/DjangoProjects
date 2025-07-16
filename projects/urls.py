@@ -23,6 +23,7 @@ urlpatterns = [
     path('news_aggregator/', include('news_aggregator.urls')),
     path('chat/', include('chat.urls')),
     path('jobs/', include('jobboard.urls')),
+    path('resume/', include('resume_builder.urls')),
 ]
 
 

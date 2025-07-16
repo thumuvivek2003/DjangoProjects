@@ -6010,3 +6010,559 @@ function updateStatus(applicationId, status) {
 </script>
 {% endblock %}
 
+# 16 | Resume Builder          | Form to generate PDF resume           | ReportLab/WeasyPrint, PDF export   
+# Django Resume Builder - Complete Guide
+
+## Step 1: Create the App
+
+In your terminal, navigate to your Django project directory and run:
+
+```bash
+cd projects
+python manage.py startapp resume_builder
+```
+
+## Step 2: Add App to Settings
+
+In your `projects/settings.py`, add the new app to `INSTALLED_APPS`:
+
+```python
+INSTALLED_APPS = [
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'resume_builder',  # Add this line
+]
+```
+
+## Step 3: Install Required Packages
+
+Install the necessary packages for PDF generation:
+
+```bash
+pip install reportlab
+pip install weasyprint
+```
+
+## Step 4: Create Models
+
+In `resume_builder/models.py`:
+
+```python
+from django.db import models
+from django.contrib.auth.models import User
+
+class Resume(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    full_name = models.CharField(max_length=200)
+    email = models.EmailField()
+    phone = models.CharField(max_length=20)
+    address = models.TextField()
+    summary = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.full_name}'s Resume"
+
+class Experience(models.Model):
+    resume = models.ForeignKey(Resume, on_delete=models.CASCADE, related_name='experiences')
+    job_title = models.CharField(max_length=200)
+    company = models.CharField(max_length=200)
+    start_date = models.DateField()
+    end_date = models.DateField(null=True, blank=True)
+    is_current = models.BooleanField(default=False)
+    description = models.TextField()
+
+    def __str__(self):
+        return f"{self.job_title} at {self.company}"
+
+class Education(models.Model):
+    resume = models.ForeignKey(Resume, on_delete=models.CASCADE, related_name='education')
+    degree = models.CharField(max_length=200)
+    institution = models.CharField(max_length=200)
+    start_date = models.DateField()
+    end_date = models.DateField(null=True, blank=True)
+    is_current = models.BooleanField(default=False)
+    grade = models.CharField(max_length=50, blank=True)
+
+    def __str__(self):
+        return f"{self.degree} from {self.institution}"
+
+class Skill(models.Model):
+    resume = models.ForeignKey(Resume, on_delete=models.CASCADE, related_name='skills')
+    name = models.CharField(max_length=100)
+    proficiency = models.CharField(max_length=20, choices=[
+        ('beginner', 'Beginner'),
+        ('intermediate', 'Intermediate'),
+        ('advanced', 'Advanced'),
+        ('expert', 'Expert'),
+    ])
+
+    def __str__(self):
+        return self.name
+```
+
+## Step 5: Create Forms
+
+Create `resume_builder/forms.py`:
+
+```python
+from django import forms
+from django.forms import inlineformset_factory
+from .models import Resume, Experience, Education, Skill
+
+class ResumeForm(forms.ModelForm):
+    class Meta:
+        model = Resume
+        fields = ['full_name', 'email', 'phone', 'address', 'summary']
+        widgets = {
+            'full_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter your full name'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'Enter your email'}),
+            'phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter your phone number'}),
+            'address': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Enter your address'}),
+            'summary': forms.Textarea(attrs={'class': 'form-control', 'rows': 4, 'placeholder': 'Write a brief summary about yourself'}),
+        }
+
+class ExperienceForm(forms.ModelForm):
+    class Meta:
+        model = Experience
+        fields = ['job_title', 'company', 'start_date', 'end_date', 'is_current', 'description']
+        widgets = {
+            'job_title': forms.TextInput(attrs={'class': 'form-control'}),
+            'company': forms.TextInput(attrs={'class': 'form-control'}),
+            'start_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'end_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'is_current': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+        }
+
+class EducationForm(forms.ModelForm):
+    class Meta:
+        model = Education
+        fields = ['degree', 'institution', 'start_date', 'end_date', 'is_current', 'grade']
+        widgets = {
+            'degree': forms.TextInput(attrs={'class': 'form-control'}),
+            'institution': forms.TextInput(attrs={'class': 'form-control'}),
+            'start_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'end_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'is_current': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'grade': forms.TextInput(attrs={'class': 'form-control'}),
+        }
+
+class SkillForm(forms.ModelForm):
+    class Meta:
+        model = Skill
+        fields = ['name', 'proficiency']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'proficiency': forms.Select(attrs={'class': 'form-control'}),
+        }
+
+# Create formsets for dynamic forms
+ExperienceFormSet = inlineformset_factory(Resume, Experience, form=ExperienceForm, extra=1, can_delete=True)
+EducationFormSet = inlineformset_factory(Resume, Education, form=EducationForm, extra=1, can_delete=True)
+SkillFormSet = inlineformset_factory(Resume, Skill, form=SkillForm, extra=1, can_delete=True)
+```
+
+## Step 6: Create Views
+
+In `resume_builder/views.py`:
+
+```python
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.http import HttpResponse
+from django.template.loader import render_to_string
+from .models import Resume
+from .forms import ResumeForm, ExperienceFormSet, EducationFormSet, SkillFormSet
+from .utils import generate_pdf_reportlab, generate_pdf_weasyprint
+
+@login_required
+def resume_list(request):
+    resumes = Resume.objects.filter(user=request.user)
+    return render(request, 'resume_builder/resume_list.html', {'resumes': resumes})
+
+@login_required
+def resume_create(request):
+    if request.method == 'POST':
+        form = ResumeForm(request.POST)
+        experience_formset = ExperienceFormSet(request.POST)
+        education_formset = EducationFormSet(request.POST)
+        skill_formset = SkillFormSet(request.POST)
+        
+        if form.is_valid() and experience_formset.is_valid() and education_formset.is_valid() and skill_formset.is_valid():
+            resume = form.save(commit=False)
+            resume.user = request.user
+            resume.save()
+            
+            experience_formset.instance = resume
+            experience_formset.save()
+            
+            education_formset.instance = resume
+            education_formset.save()
+            
+            skill_formset.instance = resume
+            skill_formset.save()
+            
+            messages.success(request, 'Resume created successfully!')
+            return redirect('resume_list')
+    else:
+        form = ResumeForm()
+        experience_formset = ExperienceFormSet()
+        education_formset = EducationFormSet()
+        skill_formset = SkillFormSet()
+    
+    return render(request, 'resume_builder/resume_form.html', {
+        'form': form,
+        'experience_formset': experience_formset,
+        'education_formset': education_formset,
+        'skill_formset': skill_formset,
+    })
+
+@login_required
+def resume_edit(request, pk):
+    resume = get_object_or_404(Resume, pk=pk, user=request.user)
+    
+    if request.method == 'POST':
+        form = ResumeForm(request.POST, instance=resume)
+        experience_formset = ExperienceFormSet(request.POST, instance=resume)
+        education_formset = EducationFormSet(request.POST, instance=resume)
+        skill_formset = SkillFormSet(request.POST, instance=resume)
+        
+        if form.is_valid() and experience_formset.is_valid() and education_formset.is_valid() and skill_formset.is_valid():
+            resume = form.save()
+            experience_formset.save()
+            education_formset.save()
+            skill_formset.save()
+            
+            messages.success(request, 'Resume updated successfully!')
+            return redirect('resume_list')
+    else:
+        form = ResumeForm(instance=resume)
+        experience_formset = ExperienceFormSet(instance=resume)
+        education_formset = EducationFormSet(instance=resume)
+        skill_formset = SkillFormSet(instance=resume)
+    
+    return render(request, 'resume_builder/resume_form.html', {
+        'form': form,
+        'experience_formset': experience_formset,
+        'education_formset': education_formset,
+        'skill_formset': skill_formset,
+        'resume': resume,
+    })
+
+@login_required
+def resume_preview(request, pk):
+    resume = get_object_or_404(Resume, pk=pk, user=request.user)
+    return render(request, 'resume_builder/resume_preview.html', {'resume': resume})
+
+@login_required
+def resume_download_pdf(request, pk):
+    resume = get_object_or_404(Resume, pk=pk, user=request.user)
+    pdf_type = request.GET.get('type', 'reportlab')
+    
+    if pdf_type == 'weasyprint':
+        pdf_buffer = generate_pdf_weasyprint(resume)
+    else:
+        pdf_buffer = generate_pdf_reportlab(resume)
+    
+    response = HttpResponse(pdf_buffer.getvalue(), content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{resume.full_name}_resume.pdf"'
+    return response
+
+@login_required
+def resume_delete(request, pk):
+    resume = get_object_or_404(Resume, pk=pk, user=request.user)
+    if request.method == 'POST':
+        resume.delete()
+        messages.success(request, 'Resume deleted successfully!')
+        return redirect('resume_list')
+    return render(request, 'resume_builder/resume_confirm_delete.html', {'resume': resume})
+```
+
+## Step 7: Create PDF Generation Utils
+
+Create `resume_builder/utils.py`:
+
+```python
+from io import BytesIO
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter, A4
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.lib.units import inch
+from reportlab.lib import colors
+import weasyprint
+from django.template.loader import render_to_string
+
+def generate_pdf_reportlab(resume):
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=18)
+    
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=18,
+        spaceAfter=12,
+        alignment=1,  # Center alignment
+        textColor=colors.darkblue
+    )
+    
+    heading_style = ParagraphStyle(
+        'CustomHeading',
+        parent=styles['Heading2'],
+        fontSize=14,
+        spaceAfter=6,
+        textColor=colors.darkblue,
+        borderWidth=1,
+        borderColor=colors.darkblue,
+        borderPadding=5
+    )
+    
+    story = []
+    
+    # Title
+    story.append(Paragraph(resume.full_name, title_style))
+    story.append(Spacer(1, 12))
+    
+    # Contact Info
+    contact_info = f"{resume.email} | {resume.phone}"
+    story.append(Paragraph(contact_info, styles['Normal']))
+    story.append(Paragraph(resume.address, styles['Normal']))
+    story.append(Spacer(1, 12))
+    
+    # Summary
+    if resume.summary:
+        story.append(Paragraph("SUMMARY", heading_style))
+        story.append(Paragraph(resume.summary, styles['Normal']))
+        story.append(Spacer(1, 12))
+    
+    # Experience
+    if resume.experiences.exists():
+        story.append(Paragraph("EXPERIENCE", heading_style))
+        for exp in resume.experiences.all():
+            end_date = "Present" if exp.is_current else exp.end_date.strftime("%Y-%m-%d")
+            exp_header = f"<b>{exp.job_title}</b> at {exp.company} ({exp.start_date.strftime('%Y-%m-%d')} - {end_date})"
+            story.append(Paragraph(exp_header, styles['Normal']))
+            story.append(Paragraph(exp.description, styles['Normal']))
+            story.append(Spacer(1, 6))
+    
+    # Education
+    if resume.education.exists():
+        story.append(Paragraph("EDUCATION", heading_style))
+        for edu in resume.education.all():
+            end_date = "Present" if edu.is_current else edu.end_date.strftime("%Y-%m-%d")
+            edu_header = f"<b>{edu.degree}</b> from {edu.institution} ({edu.start_date.strftime('%Y-%m-%d')} - {end_date})"
+            story.append(Paragraph(edu_header, styles['Normal']))
+            if edu.grade:
+                story.append(Paragraph(f"Grade: {edu.grade}", styles['Normal']))
+            story.append(Spacer(1, 6))
+    
+    # Skills
+    if resume.skills.exists():
+        story.append(Paragraph("SKILLS", heading_style))
+        skills_data = []
+        for skill in resume.skills.all():
+            skills_data.append([skill.name, skill.proficiency.title()])
+        
+        skills_table = Table(skills_data, colWidths=[3*inch, 2*inch])
+        skills_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 12),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        ]))
+        story.append(skills_table)
+    
+    doc.build(story)
+    buffer.seek(0)
+    return buffer
+
+def generate_pdf_weasyprint(resume):
+    html_string = render_to_string('resume_builder/resume_pdf_template.html', {'resume': resume})
+    
+    html = weasyprint.HTML(string=html_string)
+    pdf_buffer = BytesIO()
+    html.write_pdf(pdf_buffer)
+    pdf_buffer.seek(0)
+    return pdf_buffer
+```
+
+## Step 8: Create Templates
+
+Create the following directory structure:
+```
+resume_builder/
+    templates/
+        resume_builder/
+            base.html
+            resume_list.html
+            resume_form.html
+            resume_preview.html
+            resume_confirm_delete.html
+            resume_pdf_template.html
+```
+
+### Base Template (`resume_builder/templates/resume_builder/base.html`):
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Resume Builder{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="{% url 'resume_list' %}">Resume Builder</a>
+            <div class="navbar-nav ms-auto">
+                {% if user.is_authenticated %}
+                    <a class="nav-link" href="{% url 'resume_list' %}">My Resumes</a>
+                    <a class="nav-link" href="{% url 'resume_create' %}">Create Resume</a>
+                    <a class="nav-link" href="{% url 'admin:logout' %}">Logout</a>
+                {% else %}
+                    <a class="nav-link" href="{% url 'admin:login' %}">Login</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        {% block content %}
+        {% endblock %}
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    {% block scripts %}
+    {% endblock %}
+</body>
+</html>
+```
+
+### Resume List Template (`resume_builder/templates/resume_builder/resume_list.html`):
+
+```html
+{% extends 'resume_builder/base.html' %}
+
+{% block title %}My Resumes - Resume Builder{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>My Resumes</h1>
+    <a href="{% url 'resume_create' %}" class="btn btn-primary">Create New Resume</a>
+</div>
+
+{% if resumes %}
+    <div class="row">
+        {% for resume in resumes %}
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ resume.full_name }}</h5>
+                        <p class="card-text">{{ resume.email }}</p>
+                        <p class="card-text">
+                            <small class="text-muted">Updated: {{ resume.updated_at|date:"M d, Y" }}</small>
+                        </p>
+                    </div>
+                    <div class="card-footer">
+                        <a href="{% url 'resume_preview' resume.pk %}" class="btn btn-info btn-sm">Preview</a>
+                        <a href="{% url 'resume_edit' resume.pk %}" class="btn btn-warning btn-sm">Edit</a>
+                        <a href="{% url 'resume_download_pdf' resume.pk %}" class="btn btn-success btn-sm">Download PDF</a>
+                        <a href="{% url 'resume_delete' resume.pk %}" class="btn btn-danger btn-sm">Delete</a>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="text-center">
+        <h3>No resumes yet!</h3>
+        <p>Create your first resume to get started.</p>
+        <a href="{% url 'resume_create' %}" class="btn btn-primary">Create Resume</a>
+    </div>
+{% endif %}
+{% endblock %}
+```
+
+## Step 9: Create URLs
+
+Create `resume_builder/urls.py`:
+
+```python
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    path('', views.resume_list, name='resume_list'),
+    path('create/', views.resume_create, name='resume_create'),
+    path('<int:pk>/edit/', views.resume_edit, name='resume_edit'),
+    path('<int:pk>/preview/', views.resume_preview, name='resume_preview'),
+    path('<int:pk>/download/', views.resume_download_pdf, name='resume_download_pdf'),
+    path('<int:pk>/delete/', views.resume_delete, name='resume_delete'),
+]
+```
+
+## Step 10: Update Main URLs
+
+In your main `projects/urls.py`:
+
+```python
+from django.contrib import admin
+from django.urls import path, include
+
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('resume/', include('resume_builder.urls')),
+]
+```
+
+## Step 11: Run Migrations
+
+```bash
+python manage.py makemigrations
+python manage.py migrate
+```
+
+## Step 12: Create Superuser and Test
+
+```bash
+python manage.py createsuperuser
+python manage.py runserver
+```
+
+Now you can access your resume builder at `http://127.0.0.1:8000/resume/`
+
+## Next Steps
+
+1. Complete the remaining templates (resume_form.html, resume_preview.html, etc.)
+2. Add more styling and JavaScript for better user experience
+3. Add user authentication views
+4. Implement more advanced PDF styling
+5. Add resume templates/themes
+6. Add validation and error handling
+
+This gives you a solid foundation for a Django Resume Builder with PDF export functionality using both ReportLab and WeasyPrint!
+
+

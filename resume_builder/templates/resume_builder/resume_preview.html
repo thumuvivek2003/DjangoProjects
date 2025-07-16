@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ resume.full_name }} - Resume</title>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            color: #2c3e50;
+            margin: 40px;
+            line-height: 1.6;
+            font-size: 14px;
+            background-color: #ffffff;
+        }
+        h1, h2, h3 {
+            margin: 0;
+            color: #1a1a1a;
+        }
+        h1 {
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+        h2 {
+            font-size: 18px;
+            border-bottom: 2px solid #0077b6;
+            padding-bottom: 3px;
+            margin-top: 30px;
+            margin-bottom: 10px;
+        }
+        h3 {
+            font-size: 16px;
+            margin-bottom: 2px;
+        }
+        .contact-info p {
+            margin: 2px 0;
+        }
+        .section {
+            margin-bottom: 25px;
+        }
+        .item {
+            margin-bottom: 15px;
+        }
+        .date-range {
+            float: right;
+            font-style: italic;
+            color: #555;
+        }
+        .clear {
+            clear: both;
+        }
+        .skills-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .skill-badge {
+            background-color: #f1f1f1;
+            border-radius: 20px;
+            padding: 6px 12px;
+            font-size: 13px;
+            color: #333;
+            border: 1px solid #ccc;
+        }
+        .summary {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #e0e0e0;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>{{ resume.full_name }}</h1>
+    <div class="contact-info">
+        <p>Email: {{ resume.email }}</p>
+        <p>Phone: {{ resume.phone }}</p>
+        <p>Address: {{ resume.address }}</p>
+    </div>
+
+    <div class="section">
+        <h2>Professional Summary</h2>
+        <div class="summary">
+            <p>{{ resume.summary }}</p>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>Experience</h2>
+        {% for exp in resume.experiences.all %}
+        <div class="item">
+            <h3>{{ exp.job_title }} - {{ exp.company }}</h3>
+            <div class="date-range">
+                {{ exp.start_date }} to {% if exp.is_current %}Present{% else %}{{ exp.end_date }}{% endif %}
+            </div>
+            <div class="clear"></div>
+            <p>{{ exp.description }}</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="section">
+        <h2>Education</h2>
+        {% for edu in resume.education.all %}
+        <div class="item">
+            <h3>{{ edu.degree }} - {{ edu.institution }}</h3>
+            <div class="date-range">
+                {{ edu.start_date }} to {% if edu.is_current %}Present{% else %}{{ edu.end_date }}{% endif %}
+            </div>
+            <div class="clear"></div>
+            <p>Grade: {{ edu.grade }}</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="section">
+        <h2>Skills</h2>
+        <div class="skills-list">
+            {% for skill in resume.skills.all %}
+            <div class="skill-badge">{{ skill.name }} - {{ skill.proficiency|title }}</div>
+            {% endfor %}
+        </div>
+    </div>
+
+</body>
+</html>

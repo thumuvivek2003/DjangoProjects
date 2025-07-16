@@ -1,0 +1,247 @@
+<!-- resume_form.html -->
+{% extends 'resume_builder/base.html' %}
+
+{% block title %}
+    {% if resume %}Edit Resume{% else %}Create Resume{% endif %} - Resume Builder
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <h1>{% if resume %}Edit Resume{% else %}Create Resume{% endif %}</h1>
+        
+        <form method="post" novalidate>
+            {% csrf_token %}
+            
+            <!-- Personal Information -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h3>Personal Information</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.full_name.id_for_label }}" class="form-label">Full Name</label>
+                                {{ form.full_name }}
+                                {% if form.full_name.errors %}
+                                    <div class="text-danger">{{ form.full_name.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.email.id_for_label }}" class="form-label">Email</label>
+                                {{ form.email }}
+                                {% if form.email.errors %}
+                                    <div class="text-danger">{{ form.email.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.phone.id_for_label }}" class="form-label">Phone</label>
+                                {{ form.phone }}
+                                {% if form.phone.errors %}
+                                    <div class="text-danger">{{ form.phone.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.address.id_for_label }}" class="form-label">Address</label>
+                                {{ form.address }}
+                                {% if form.address.errors %}
+                                    <div class="text-danger">{{ form.address.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="{{ form.summary.id_for_label }}" class="form-label">Summary</label>
+                        {{ form.summary }}
+                        {% if form.summary.errors %}
+                            <div class="text-danger">{{ form.summary.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Experience Section -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3>Work Experience</h3>
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="addExperience()">Add Experience</button>
+                </div>
+                <div class="card-body">
+                    {{ experience_formset.management_form }}
+                    <div id="experience-forms">
+                        {% for form in experience_formset %}
+                            <div class="experience-form border p-3 mb-3">
+                                {% for hidden in form.hidden_fields %}
+                                    {{ hidden }}
+                                {% endfor %}
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">Job Title</label>
+                                            {{ form.job_title }}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">Company</label>
+                                            {{ form.company }}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <label class="form-label">Start Date</label>
+                                            {{ form.start_date }}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <label class="form-label">End Date</label>
+                                            {{ form.end_date }}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <div class="form-check mt-4">
+                                                {{ form.is_current }}
+                                                <label class="form-check-label">Current Position</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Description</label>
+                                    {{ form.description }}
+                                </div>
+                                {% if form.DELETE %}
+                                    <div class="form-check">
+                                        {{ form.DELETE }}
+                                        <label class="form-check-label text-danger">Delete this experience</label>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Education Section -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3>Education</h3>
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="addEducation()">Add Education</button>
+                </div>
+                <div class="card-body">
+                    {{ education_formset.management_form }}
+                    <div id="education-forms">
+                        {% for form in education_formset %}
+                            <div class="education-form border p-3 mb-3">
+                                {% for hidden in form.hidden_fields %}
+                                    {{ hidden }}
+                                {% endfor %}
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">Degree</label>
+                                            {{ form.degree }}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">Institution</label>
+                                            {{ form.institution }}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <div class="mb-3">
+                                            <label class="form-label">Start Date</label>
+                                            {{ form.start_date }}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="mb-3">
+                                            <label class="form-label">End Date</label>
+                                            {{ form.end_date }}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="mb-3">                                    <div class="col-md-3">
+                                        <div class="mb-3">
+                                            <label class="form-label">Grade / Score</label>
+                                            {{ form.grade }}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="form-check mt-4">
+                                            {{ form.is_current }}
+                                            <label class="form-check-label">Currently Studying</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Description</label>
+                                    {{ form.description }}
+                                </div>
+                                {% if form.DELETE %}
+                                    <div class="form-check">
+                                        {{ form.DELETE }}
+                                        <label class="form-check-label text-danger">Delete this education</label>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="text-end">
+                <button type="submit" class="btn btn-success">
+                    {% if resume %}Update Resume{% else %}Create Resume{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- JS for dynamically adding forms -->
+<script>
+    function addExperience() {
+        const formCount = document.querySelectorAll('#experience-forms .experience-form').length;
+        const newForm = document.querySelector('#experience-forms .experience-form').cloneNode(true);
+        newForm.querySelectorAll('input, textarea, select').forEach(input => {
+            const name = input.name.replace(/\d+/, formCount);
+            const id = input.id.replace(/\d+/, formCount);
+            input.name = name;
+            input.id = id;
+            if (input.type !== 'hidden') input.value = '';
+        });
+        document.querySelector('#experience-forms').appendChild(newForm);
+    }
+
+    function addEducation() {
+        const formCount = document.querySelectorAll('#education-forms .education-form').length;
+        const newForm = document.querySelector('#education-forms .education-form').cloneNode(true);
+        newForm.querySelectorAll('input, textarea, select').forEach(input => {
+            const name = input.name.replace(/\d+/, formCount);
+            const id = input.id.replace(/\d+/, formCount);
+            input.name = name;
+            input.id = id;
+            if (input.type !== 'hidden') input.value = '';
+        });
+        document.querySelector('#education-forms').appendChild(newForm);
+    }
+</script>
+{% endblock %}
