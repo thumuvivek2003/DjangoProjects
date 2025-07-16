@@ -1,0 +1,94 @@
+{% extends 'news_aggregator/base.html' %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-3">
+        <h5>Filters</h5>
+        
+        <!-- Search Form -->
+        <form method="get" class="mb-3">
+            <input type="text" name="q" class="form-control" placeholder="Search news..." value="{{ query }}">
+            <button type="submit" class="btn btn-primary btn-sm mt-2">Search</button>
+        </form>
+        
+        <!-- Categories -->
+        <div class="mb-3">
+            <h6>Categories</h6>
+            <ul class="list-unstyled">
+                <li><a href="{% url 'news_aggregator:news_list' %}">All Categories</a></li>
+                {% for category in categories %}
+                <li>
+                    <a href="?category={{ category.id }}">{{ category.name }}</a>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        
+        <!-- Sources -->
+        <div class="mb-3">
+            <h6>Sources</h6>
+            <ul class="list-unstyled">
+                <li><a href="{% url 'news_aggregator:news_list' %}">All Sources</a></li>
+                {% for source in sources %}
+                <li>
+                    <a href="?source={{ source.id }}">{{ source.name }}</a>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    
+    <div class="col-md-9">
+        <h2>Latest News</h2>
+        
+        {% for article in articles %}
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <a href="{% url 'news_aggregator:news_detail' article.pk %}">{{ article.title }}</a>
+                </h5>
+                <p class="card-text">{{ article.summary }}</p>
+                <p class="card-text">
+                    <small class="text-muted">
+                        {{ article.source.name }} • {{ article.published_at|date:"M d, Y H:i" }}
+                    </small>
+                </p>
+            </div>
+        </div>
+        {% empty %}
+        <p>No news articles found.</p>
+        {% endfor %}
+        
+        <!-- Pagination -->
+        {% if articles.has_other_pages %}
+        <nav aria-label="Page navigation">
+            <ul class="pagination">
+                {% if articles.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ articles.previous_page_number }}">Previous</a>
+                </li>
+                {% endif %}
+                
+                {% for num in articles.paginator.page_range %}
+                {% if articles.number == num %}
+                <li class="page-item active">
+                    <span class="page-link">{{ num }}</span>
+                </li>
+                {% else %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                </li>
+                {% endif %}
+                {% endfor %}
+                
+                {% if articles.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ articles.next_page_number }}">Next</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

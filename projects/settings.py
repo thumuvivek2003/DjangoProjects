@@ -52,7 +52,8 @@ INSTALLED_APPS = [
     'weather',
     'polls',
     'shop2',
-    'newsapp'
+    'newsapp',
+    'news_aggregator', 
 ]
 
 MIDDLEWARE = [
@@ -157,7 +158,23 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 
-CELERY_BROKER_URL = 'redis://localhost:6379/0'  # Or use RabbitMQ
-CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+# Celery Configuration
+CELERY_BROKER_URL = 'redis://localhost:6379'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379'
+CELERY_ACCEPT_CONTENT = ['application/json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'UTC'
 
+# Celery Beat Configuration
+CELERY_BEAT_SCHEDULE = {
+    'scrape-news-every-hour': {
+        'task': 'news_aggregator.tasks.scrape_news',
+        'schedule': 3600.0,  # Every hour
+    },
+    'cleanup-old-articles-daily': {
+        'task': 'news_aggregator.tasks.cleanup_old_articles',
+        'schedule': 86400.0,  # Every day
+    },
+}
 

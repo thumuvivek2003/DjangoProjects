@@ -34,3 +34,6 @@ Hi, i am learning django with project based , so currently I want to learn | 11 
 
 Hi, i am learning django with project based , so currently I want to learn | 13 | News Aggregator         | Scrape and show news                  | BeautifulSoup, Celery, cron jobs                     | as I am beginnner please give me  code regarding above and guide me with the steps please with start app 
 
+
+Hi, i am learning django with project based , so currently I want to learn | 13 | News Aggregator         | Scrape and show news                  | BeautifulSoup, Celery, cron jobs                     | as I am beginnner please give me  code regarding above and guide me as i have already created projects so  with in it  steps  with start app 
+
