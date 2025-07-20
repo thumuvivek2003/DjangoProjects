@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     'chat',     
     'jobboard', 
     'resume_builder',
+    'social_network2',
 ]
 
 MIDDLEWARE = [

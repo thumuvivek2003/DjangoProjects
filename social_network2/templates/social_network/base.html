@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Social Network{% endblock %}</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .profile-img {
+            width: 40px;
+            height: 40px;
+            object-fit: cover;
+            border-radius: 50%;
+        }
+        .post-card {
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            background: white;
+        }
+        .like-btn, .comment-btn {
+            border: none;
+            background: none;
+            color: #6c757d;
+            transition: color 0.3s;
+        }
+        .like-btn:hover, .comment-btn:hover {
+            color: #007bff;
+        }
+        .like-btn.liked {
+            color: #dc3545;
+        }
+        .navbar-brand {
+            font-weight: bold;
+            color: #007bff !important;
+        }
+        .comment-section {
+            border-top: 1px solid #dee2e6;
+            padding-top: 15px;
+            margin-top: 15px;
+        }
+        .comment-item {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top">
+        <div class="container">
+            <a class="navbar-brand" href="{% url 'social_network:home' %}">
+                <i class="fas fa-users"></i> SocialNet
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    {% if user.is_authenticated %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'social_network:home' %}">
+                                <i class="fas fa-home"></i> Home
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'social_network:search' %}">
+                                <i class="fas fa-search"></i> Search
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+                
+                <ul class="navbar-nav">
+                    {% if user.is_authenticated %}
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
+                                {% if user.profile.profile_picture %}
+                                    <img src="{{ user.profile.profile_picture.url }}" alt="{{ user.username }}" class="profile-img me-1">
+                                {% endif %}
+                                {{ user.username }}
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="{% url 'social_network:profile' user.username %}">
+                                    <i class="fas fa-user"></i> Profile
+                                </a></li>
+                                <li><a class="dropdown-item" href="{% url 'social_network:edit_profile' %}">
+                                    <i class="fas fa-edit"></i> Edit Profile
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{% url 'logout' %}">
+                                    <i class="fas fa-sign-out-alt"></i> Logout
+                                </a></li>
+                            </ul>
+                        </li>
+                    {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'login' %}">Login</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'social_network:register' %}">Register</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Messages -->
+    {% if messages %}
+        <div class="container mt-3">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- Main Content -->
+    <div class="container mt-4">
+        {% block content %}
+        {% endblock %}
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.0/jquery.min.js"></script>
+    
+    <script>
+        // CSRF token for AJAX requests
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        const csrftoken = getCookie('csrftoken');
+
+        // Follow/Unfollow functionality
+        $(document).on('click', '.follow-btn', function() {
+            const btn = $(this);
+            const userId = btn.data('user-id');
+            
+            $.post('{% url "social_network:follow_user" %}', {
+                'user_id': userId,
+                'csrfmiddlewaretoken': csrftoken
+            })
+            .done(function(data) {
+                if (data.status === 'followed') {
+                    btn.removeClass('btn-primary').addClass('btn-outline-primary');
+                    btn.text('Unfollow');
+                } else {
+                    btn.removeClass('btn-outline-primary').addClass('btn-primary');
+                    btn.text('Follow');
+                }
+                $('.followers-count').text(data.followers_count);
+            });
+        });
+
+        // Like/Unlike functionality
+        $(document).on('click', '.like-btn', function() {
+            const btn = $(this);
+            const contentTypeId = btn.data('content-type-id');
+            const objectId = btn.data('object-id');
+            
+            $.post('{% url "social_network:like_content" %}', {
+                'content_type_id': contentTypeId,
+                'object_id': objectId,
+                'csrfmiddlewaretoken': csrftoken
+            })
+            .done(function(data) {
+                const icon = btn.find('i');
+                const countSpan = btn.find('.like-count');
+                
+                if (data.status === 'liked') {
+                    btn.addClass('liked');
+                    icon.removeClass('far').addClass('fas');
+                } else {
+                    btn.removeClass('liked');
+                    icon.removeClass('fas').addClass('far');
+                }
+                countSpan.text(data.like_count);
+            });
+        });
+
+        // Add comment functionality
+        $(document).on('click', '.add-comment-btn', function() {
+            const btn = $(this);
+            const postId = btn.data('post-id');
+            const commentInput = btn.siblings('.comment-input');
+            const content = commentInput.val().trim();
+            
+            if (!content) {
+                alert('Please enter a comment');
+                return;
+            }
+            
+            $.post('{% url "social_network:add_comment" %}', {
+                'post_id': postId,
+                'content': content,
+                'csrfmiddlewaretoken': csrftoken
+            })
+            .done(function(data) {
+                if (data.status === 'success') {
+                    const commentsContainer = btn.closest('.post-card').find('.comments-container');
+                    const newComment = `
+                        <div class="comment-item">
+                            <div class="d-flex">
+                                <div class="flex-shrink-0">
+                                    ${data.comment.author_profile_picture ? 
+                                        `<img src="${data.comment.author_profile_picture}" alt="${data.comment.author}" class="profile-img">` :
+                                        `<div class="profile-img bg-secondary d-flex align-items-center justify-content-center">
+                                            <i class="fas fa-user text-white"></i>
+                                        </div>`
+                                    }
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <strong>${data.comment.author}</strong>
+                                    <small class="text-muted">${data.comment.created_at}</small>
+                                    <p class="mb-0 mt-1">${data.comment.content}</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    commentsContainer.append(newComment);
+                    commentInput.val('');
+                    
+                    // Update comment count
+                    btn.closest('.post-card').find('.comment-count').text(data.comment_count);
+                }
+            });
+        });
+    </script>
+    
+    {% block extra_js %}
+    {% endblock %}
+</body>
+</html>

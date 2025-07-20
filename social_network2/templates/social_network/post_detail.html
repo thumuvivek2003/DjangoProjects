@@ -1,0 +1,322 @@
+{% extends 'social_network/base.html' %}
+
+{% block title %}Post by {{ post.author.get_full_name|default:post.author.username|default:'Unknown User' }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <!-- Post Detail Card -->
+        <div class="post-card">
+            <div class="card-body">
+                <!-- Post Header -->
+                <div class="d-flex mb-3">
+                    <div class="flex-shrink-0">
+                        {% if post.author.profile.profile_picture %}
+                            <img src="{{ post.author.profile.profile_picture.url }}" 
+                                 alt="{{ post.author.username|default:'User' }}" 
+                                 class="profile-img">
+                        {% else %}
+                            <div class="profile-img bg-secondary d-flex align-items-center justify-content-center">
+                                <i class="fas fa-user text-white"></i>
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h6 class="mb-0">
+                            <a href="{% url 'social_network:profile' post.author.username %}" 
+                               class="text-decoration-none">
+                                {{ post.author.get_full_name|default:post.author.username|default:'Unknown User' }}
+                            </a>
+                        </h6>
+                        <small class="text-muted">
+                            @{{ post.author.username|default:'unknown' }} • 
+                            {{ post.created_at|timesince|default:'Unknown time' }} ago
+                        </small>
+                    </div>
+                    {% if post.author == user %}
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" 
+                                type="button" 
+                                data-bs-toggle="dropdown">
+                            <i class="fas fa-ellipsis-v"></i>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#">
+                                <i class="fas fa-edit"></i> Edit Post
+                            </a></li>
+                            <li><a class="dropdown-item text-danger" href="#">
+                                <i class="fas fa-trash"></i> Delete Post
+                            </a></li>
+                        </ul>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Post Content -->
+                <div class="mb-3">
+                    <p class="mb-3">{{ post.content|default:'No content' }}</p>
+                    
+                    {% if post.image %}
+                        <div class="mb-3">
+                            <img src="{{ post.image.url }}" 
+                                 alt="Post image" 
+                                 class="img-fluid rounded">
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Post Actions -->
+                <div class="d-flex align-items-center mb-3">
+                    <button class="like-btn me-3" 
+                            data-content-type-id="{{ post_content_type.id|default:0 }}" 
+                            data-object-id="{{ post.id|default:0 }}">
+                        <i class="far fa-heart"></i>
+                        <span class="like-count">{{ post.get_like_count|default:0 }}</span>
+                    </button>
+                    <button class="comment-btn me-3" 
+                            data-bs-toggle="collapse" 
+                            data-bs-target="#comments-section">
+                        <i class="far fa-comment"></i>
+                        <span class="comment-count">{{ post.get_comment_count|default:0 }}</span>
+                    </button>
+                    <small class="text-muted">
+                        <i class="fas fa-eye"></i> {{ post.get_comment_count|default:0 }} comments
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Comments Section -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-comments"></i> Comments ({{ post.get_comment_count|default:0 }})
+                </h6>
+            </div>
+            <div class="card-body">
+                <!-- Add Comment Form -->
+                <div class="mb-4">
+                    <div class="d-flex">
+                        <div class="flex-shrink-0">
+                            {% if user.profile.profile_picture %}
+                                <img src="{{ user.profile.profile_picture.url }}" 
+                                     alt="{{ user.username|default:'User' }}" 
+                                     class="profile-img">
+                            {% else %}
+                                <div class="profile-img bg-secondary d-flex align-items-center justify-content-center">
+                                    <i class="fas fa-user text-white"></i>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <form method="post">
+                                {% csrf_token %}
+                                <div class="input-group">
+                                    {{ comment_form.content }}
+                                    <button class="btn btn-primary" type="submit">
+                                        <i class="fas fa-paper-plane"></i> Comment
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Comments List -->
+                <div class="comments-container">
+                    {% for comment in comments %}
+                        <div class="comment-item mb-3">
+                            <div class="d-flex">
+                                <div class="flex-shrink-0">
+                                    {% if comment.author.profile.profile_picture %}
+                                        <img src="{{ comment.author.profile.profile_picture.url }}" 
+                                             alt="{{ comment.author.username|default:'User' }}" 
+                                             class="profile-img">
+                                    {% else %}
+                                        <div class="profile-img bg-secondary d-flex align-items-center justify-content-center">
+                                            <i class="fas fa-user text-white"></i>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <strong>{{ comment.author.get_full_name|default:comment.author.username|default:'Unknown User' }}</strong>
+                                            <small class="text-muted ms-2">@{{ comment.author.username|default:'unknown' }}</small>
+                                            <br>
+                                            <small class="text-muted">{{ comment.created_at|timesince|default:'Unknown time' }} ago</small>
+                                            <p class="mb-1 mt-2">{{ comment.content|default:'No content' }}</p>
+                                        </div>
+                                        {% if comment.author == user %}
+                                        <div class="dropdown">
+                                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" 
+                                                    type="button" 
+                                                    data-bs-toggle="dropdown">
+                                                <i class="fas fa-ellipsis-v"></i>
+                                            </button>
+                                            <ul class="dropdown-menu">
+                                                <li><a class="dropdown-item" href="#">
+                                                    <i class="fas fa-edit"></i> Edit
+                                                </a></li>
+                                                <li><a class="dropdown-item text-danger" href="#">
+                                                    <i class="fas fa-trash"></i> Delete
+                                                </a></li>
+                                            </ul>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <!-- Comment Actions -->
+                                    <div class="mt-2">
+                                        <button class="like-btn btn btn-sm btn-outline-secondary me-2" 
+                                                data-content-type-id="{{ comment_content_type.id|default:0 }}" 
+                                                data-object-id="{{ comment.id|default:0 }}">
+                                            <i class="far fa-heart"></i>
+                                            <span class="like-count">{{ comment.get_like_count|default:0 }}</span>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-secondary reply-btn" 
+                                                data-comment-id="{{ comment.id }}">
+                                            <i class="far fa-comment"></i> Reply
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% empty %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-comments fa-2x text-muted mb-3"></i>
+                            <h6 class="text-muted">No comments yet</h6>
+                            <p class="text-muted">Be the first to comment on this post!</p>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Author Info -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-user"></i> About the Author
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    {% if post.author.profile.profile_picture %}
+                        <img src="{{ post.author.profile.profile_picture.url }}" 
+                             alt="{{ post.author.username|default:'User' }}" 
+                             class="profile-img me-3">
+                    {% else %}
+                        <div class="profile-img bg-secondary d-flex align-items-center justify-content-center me-3">
+                            <i class="fas fa-user text-white"></i>
+                        </div>
+                    {% endif %}
+                    <div>
+                        <h6 class="mb-0">{{ post.author.get_full_name|default:post.author.username|default:'Unknown User' }}</h6>
+                        <small class="text-muted">@{{ post.author.username|default:'unknown' }}</small>
+                    </div>
+                </div>
+                
+                {% if post.author.profile.bio %}
+                    <p class="small text-muted">{{ post.author.profile.bio|default:'No bio available' }}</p>
+                {% endif %}
+                
+                {% if post.author.profile.location %}
+                    <p class="small text-muted">
+                        <i class="fas fa-map-marker-alt"></i> {{ post.author.profile.location|default:'Location not set' }}
+                    </p>
+                {% endif %}
+                
+                <div class="row text-center mb-3">
+                    <div class="col-4">
+                        <div class="fw-bold">{{ post.author.posts.count|default:0 }}</div>
+                        <small class="text-muted">Posts</small>
+                    </div>
+                    <div class="col-4">
+                        <div class="fw-bold">{{ post.author.followers.count|default:0 }}</div>
+                        <small class="text-muted">Followers</small>
+                    </div>
+                    <div class="col-4">
+                        <div class="fw-bold">{{ post.author.following.count|default:0 }}</div>
+                        <small class="text-muted">Following</small>
+                    </div>
+                </div>
+                
+                {% if post.author != user %}
+                    <button class="btn btn-primary follow-btn w-100" 
+                            data-user-id="{{ post.author.id }}">
+                        <i class="fas fa-user-plus"></i> Follow
+                    </button>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Post Stats -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-chart-bar"></i> Post Stats
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-4">
+                        <div class="fw-bold text-primary">{{ post.get_like_count|default:0 }}</div>
+                        <small class="text-muted">Likes</small>
+                    </div>
+                    <div class="col-4">
+                        <div class="fw-bold text-success">{{ post.get_comment_count|default:0 }}</div>
+                        <small class="text-muted">Comments</small>
+                    </div>
+                    <div class="col-4">
+                        <div class="fw-bold text-info">{{ post.created_at|date:"M d"|default:'Unknown' }}</div>
+                        <small class="text-muted">Posted</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript for Like/Unlike functionality -->
+<script>
+$(document).ready(function() {
+    // Like/Unlike functionality for posts and comments
+    $('.like-btn').click(function() {
+        const btn = $(this);
+        const contentTypeId = btn.data('content-type-id');
+        const objectId = btn.data('object-id');
+        
+        if (!contentTypeId || !objectId) {
+            console.error('Missing content type or object ID');
+            return;
+        }
+        
+        $.post('{% url "social_network:like_content" %}', {
+            'content_type_id': contentTypeId,
+            'object_id': objectId,
+            'csrfmiddlewaretoken': $('[name=csrfmiddlewaretoken]').val()
+        })
+        .done(function(data) {
+            const icon = btn.find('i');
+            const countSpan = btn.find('.like-count');
+            
+            if (data.status === 'liked') {
+                btn.addClass('liked');
+                icon.removeClass('far').addClass('fas');
+            } else {
+                btn.removeClass('liked');
+                icon.removeClass('fas').addClass('far');
+            }
+            countSpan.text(data.like_count);
+        })
+        .fail(function(xhr, status, error) {
+            console.error('Error:', error);
+        });
+    });
+});
+</script>
+{% endblock %} 

@@ -24,6 +24,7 @@ urlpatterns = [
     path('chat/', include('chat.urls')),
     path('jobs/', include('jobboard.urls')),
     path('resume/', include('resume_builder.urls')),
+    path('social/', include('social_network2.urls')),
 ]
 
 

@@ -1,0 +1,253 @@
+{% extends 'social_network/base.html' %}
+
+{% block title %}Search Users{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="fas fa-search"></i> Search Users
+                </h4>
+            </div>
+            <div class="card-body">
+                <!-- Search Form -->
+                <form method="get" class="mb-4">
+                    <div class="input-group">
+                        <input type="text" 
+                               name="q" 
+                               class="form-control" 
+                               placeholder="Search by username, first name, or last name..." 
+                               value="{{ query|default:'' }}"
+                               required>
+                        <button class="btn btn-primary" type="submit">
+                            <i class="fas fa-search"></i> Search
+                        </button>
+                    </div>
+                </form>
+                
+                <!-- Search Results -->
+                {% if query %}
+                    {% if users %}
+                        <h5 class="mb-3">Search Results for "{{ query }}"</h5>
+                        <div class="row">
+                            {% for user in users %}
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <div class="d-flex align-items-center">
+                                            <div class="me-3">
+                                                {% if user.profile.profile_picture %}
+                                                    <img src="{{ user.profile.profile_picture.url }}" 
+                                                         alt="Profile" 
+                                                         class="profile-img" 
+                                                         style="width: 60px; height: 60px;">
+                                                {% else %}
+                                                    <div class="profile-img d-flex align-items-center justify-content-center bg-secondary text-white" 
+                                                         style="width: 60px; height: 60px;">
+                                                        <i class="fas fa-user fa-2x"></i>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <h6 class="mb-1">
+                                                    <a href="{% url 'social_network:profile' user.username %}" 
+                                                       class="text-decoration-none">
+                                                        {{ user.get_full_name|default:user.username|default:'Unknown User' }}
+                                                    </a>
+                                                </h6>
+                                                <small class="text-muted">@{{ user.username|default:'unknown' }}</small>
+                                                {% if user.profile.bio %}
+                                                    <p class="mb-2 text-muted small">{{ user.profile.bio|truncatechars:100|default:'No bio available' }}</p>
+                                                {% endif %}
+                                                {% if user.profile.location %}
+                                                    <p class="mb-2 text-muted small">
+                                                        <i class="fas fa-map-marker-alt"></i> {{ user.profile.location|default:'Location not set' }}
+                                                    </p>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        <div class="mt-3">
+                                            <div class="row text-center">
+                                                <div class="col-4">
+                                                    <small class="text-muted">Posts</small>
+                                                    <div class="fw-bold">{{ user.posts.count|default:0 }}</div>
+                                                </div>
+                                                <div class="col-4">
+                                                    <small class="text-muted">Followers</small>
+                                                    <div class="fw-bold">{{ user.followers.count|default:0 }}</div>
+                                                </div>
+                                                <div class="col-4">
+                                                    <small class="text-muted">Following</small>
+                                                    <div class="fw-bold">{{ user.following.count|default:0 }}</div>
+                                                </div>
+                                            </div>
+                                            <div class="mt-3">
+                                                {% if user != request.user %}
+                                                    <button class="btn btn-sm btn-primary follow-btn w-100" 
+                                                            data-user-id="{{ user.id }}">
+                                                        <i class="fas fa-user-plus"></i> Follow
+                                                    </button>
+                                                {% else %}
+                                                    <button class="btn btn-sm btn-secondary w-100" disabled>
+                                                        <i class="fas fa-user"></i> This is you
+                                                    </button>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No users found</h5>
+                            <p class="text-muted">Try searching with different keywords or check your spelling.</p>
+                            <div class="mt-3">
+                                <a href="{% url 'social_network:search' %}" class="btn btn-outline-primary">
+                                    <i class="fas fa-search"></i> New Search
+                                </a>
+                            </div>
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">Find People</h5>
+                        <p class="text-muted">Search for users by their username, first name, or last name to connect with them.</p>
+                        <div class="row justify-content-center mt-4">
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h6 class="card-title">
+                                            <i class="fas fa-lightbulb"></i> Search Tips
+                                        </h6>
+                                        <ul class="list-unstyled mb-0">
+                                            <li><i class="fas fa-check text-success me-2"></i>Try searching by username</li>
+                                            <li><i class="fas fa-check text-success me-2"></i>Search by first or last name</li>
+                                            <li><i class="fas fa-check text-success me-2"></i>Use partial matches</li>
+                                            <li><i class="fas fa-check text-success me-2"></i>Results are case-insensitive</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Recent Activity Section -->
+        {% if query and users %}
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-clock"></i> Recent Activity
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for user in users|slice:":3" %}
+                    <div class="col-md-4 mb-3">
+                        <div class="d-flex align-items-center">
+                            {% if user.profile.profile_picture %}
+                                <img src="{{ user.profile.profile_picture.url }}" 
+                                     alt="Profile" 
+                                     class="profile-img me-2">
+                            {% else %}
+                                <div class="profile-img d-flex align-items-center justify-content-center bg-secondary text-white me-2">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                            {% endif %}
+                            <div>
+                                <small class="fw-bold">{{ user.username|default:'Unknown' }}</small>
+                                <br>
+                                <small class="text-muted">
+                                    {% if user.posts.count > 0 %}
+                                        {{ user.posts.count|default:0 }} posts
+                                    {% else %}
+                                        New user
+                                    {% endif %}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="col-md-4">
+        <!-- Search Stats -->
+        {% if query %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-chart-bar"></i> Search Stats
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h5 class="text-primary">{{ users.count|default:0 }}</h5>
+                        <small class="text-muted">Users Found</small>
+                    </div>
+                    <div class="col-6">
+                        <h5 class="text-success">{{ users.count|default:0 }}</h5>
+                        <small class="text-muted">Active Users</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Quick Actions -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-bolt"></i> Quick Actions
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'social_network:home' %}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-home"></i> Go to Home
+                    </a>
+                    <a href="{% url 'social_network:profile' user.username %}" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-user"></i> My Profile
+                    </a>
+                    {% if user.is_authenticated %}
+                    <a href="{% url 'social_network:edit_profile' %}" class="btn btn-outline-info btn-sm">
+                        <i class="fas fa-edit"></i> Edit Profile
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Follow/Unfollow JavaScript -->
+<script>
+$(document).ready(function() {
+    // Update follow button text based on current state
+    $('.follow-btn').each(function() {
+        const btn = $(this);
+        const userId = btn.data('user-id');
+        
+        // Check if user is already being followed
+        $.get('{% url "social_network:profile" "temp" %}'.replace('temp', '{{ request.user.username }}'))
+        .done(function(data) {
+            // This is a simplified check - in a real app you'd have an endpoint to check follow status
+            // For now, we'll just show the default state
+        });
+    });
+});
+</script>
+{% endblock %}

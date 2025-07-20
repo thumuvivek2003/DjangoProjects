@@ -6566,3 +6566,1404 @@ Now you can access your resume builder at `http://127.0.0.1:8000/resume/`
 This gives you a solid foundation for a Django Resume Builder with PDF export functionality using both ReportLab and WeasyPrint!
 
 
+
+# P17 : Social Network          | Follow, like, comment system          | Generic Relations, ManyToMany, AJAX    
+I'll help you create a social network app with follow, like, and comment functionality in Django! Let's build this step by step.
+
+## Step 1: Create the App
+
+First, create the social network app:
+
+```bash
+cd projects
+python manage.py startapp social_network
+```
+
+## Step 2: Add App to Settings
+
+Add the app to your `INSTALLED_APPS` in `projects/settings.py`:
+
+```python
+INSTALLED_APPS = [
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'social_network',  # Add this line
+]
+```
+
+## Step 3: Create Models
+from django.db import models
+from django.contrib.auth.models import User
+from django.contrib.contenttypes.models import ContentType
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.urls import reverse
+
+class Profile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    bio = models.TextField(max_length=500, blank=True)
+    profile_picture = models.ImageField(upload_to='profile_pics/', blank=True, null=True)
+    birth_date = models.DateField(null=True, blank=True)
+    location = models.CharField(max_length=100, blank=True)
+    website = models.URLField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f"{self.user.username}'s Profile"
+    
+    def get_absolute_url(self):
+        return reverse('social_network:profile', kwargs={'username': self.user.username})
+
+class Follow(models.Model):
+    follower = models.ForeignKey(User, related_name='following', on_delete=models.CASCADE)
+    followed = models.ForeignKey(User, related_name='followers', on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        unique_together = ('follower', 'followed')
+    
+    def __str__(self):
+        return f"{self.follower.username} follows {self.followed.username}"
+
+class Post(models.Model):
+    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='posts')
+    content = models.TextField(max_length=1000)
+    image = models.ImageField(upload_to='post_images/', blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.author.username}: {self.content[:50]}..."
+    
+    def get_absolute_url(self):
+        return reverse('social_network:post_detail', kwargs={'pk': self.pk})
+    
+    def get_like_count(self):
+        return self.likes.count()
+    
+    def get_comment_count(self):
+        return self.comments.count()
+
+class Comment(models.Model):
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='comments')
+    author = models.ForeignKey(User, on_delete=models.CASCADE)
+    content = models.TextField(max_length=500)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['created_at']
+    
+    def __str__(self):
+        return f"{self.author.username} on {self.post}: {self.content[:30]}..."
+
+class Like(models.Model):
+    """Generic Like model that can be used for Posts, Comments, etc."""
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    
+    # Generic Foreign Key fields
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.PositiveIntegerField()
+    content_object = GenericForeignKey('content_type', 'object_id')
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        unique_together = ('user', 'content_type', 'object_id')
+        indexes = [
+            models.Index(fields=['content_type', 'object_id']),
+        ]
+    
+    def __str__(self):
+        return f"{self.user.username} likes {self.content_object}"
+
+# Add generic relation to Post model
+from django.contrib.contenttypes.fields import GenericRelation
+Post.add_to_class('likes', GenericRelation(Like))
+Comment.add_to_class('likes', GenericRelation(Like))
+## Step 4: Create Forms
+from django import forms
+from django.contrib.auth.models import User
+from django.contrib.auth.forms import UserCreationForm
+from .models import Profile, Post, Comment
+
+class UserRegistrationForm(UserCreationForm):
+    email = forms.EmailField(required=True)
+    first_name = forms.CharField(max_length=30, required=True)
+    last_name = forms.CharField(max_length=30, required=True)
+    
+    class Meta:
+        model = User
+        fields = ('username', 'first_name', 'last_name', 'email', 'password1', 'password2')
+    
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.email = self.cleaned_data['email']
+        user.first_name = self.cleaned_data['first_name']
+        user.last_name = self.cleaned_data['last_name']
+        if commit:
+            user.save()
+            # Create profile for the user
+            Profile.objects.create(user=user)
+        return user
+
+class ProfileForm(forms.ModelForm):
+    class Meta:
+        model = Profile
+        fields = ('bio', 'profile_picture', 'birth_date', 'location', 'website')
+        widgets = {
+            'bio': forms.Textarea(attrs={'rows': 4, 'class': 'form-control'}),
+            'birth_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'location': forms.TextInput(attrs={'class': 'form-control'}),
+            'website': forms.URLInput(attrs={'class': 'form-control'}),
+            'profile_picture': forms.FileInput(attrs={'class': 'form-control-file'}),
+        }
+
+class UserForm(forms.ModelForm):
+    class Meta:
+        model = User
+        fields = ('first_name', 'last_name', 'email')
+        widgets = {
+            'first_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'last_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control'}),
+        }
+
+class PostForm(forms.ModelForm):
+    class Meta:
+        model = Post
+        fields = ('content', 'image')
+        widgets = {
+            'content': forms.Textarea(attrs={
+                'rows': 3, 
+                'class': 'form-control',
+                'placeholder': "What's on your mind?"
+            }),
+            'image': forms.FileInput(attrs={'class': 'form-control-file'}),
+        }
+
+class CommentForm(forms.ModelForm):
+    class Meta:
+        model = Comment
+        fields = ('content',)
+        widgets = {
+            'content': forms.Textarea(attrs={
+                'rows': 2, 
+                'class': 'form-control',
+                'placeholder': "Write a comment..."
+            }),
+        }
+## Step 5: Create Views
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
+from django.contrib import messages
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from django.core.paginator import Paginator
+from django.db.models import Q
+from django.contrib.contenttypes.models import ContentType
+from .models import Profile, Post, Comment, Follow, Like
+from .forms import UserRegistrationForm, ProfileForm, UserForm, PostForm, CommentForm
+
+def register(request):
+    if request.method == 'POST':
+        form = UserRegistrationForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Account created successfully! Please log in.')
+            return redirect('login')
+    else:
+        form = UserRegistrationForm()
+    return render(request, 'registration/register.html', {'form': form})
+
+@login_required
+def home(request):
+    # Get posts from users that the current user follows + their own posts
+    following_users = Follow.objects.filter(follower=request.user).values_list('followed', flat=True)
+    posts = Post.objects.filter(
+        Q(author__in=following_users) | Q(author=request.user)
+    ).select_related('author', 'author__profile').prefetch_related('likes', 'comments')
+    
+    # Pagination
+    paginator = Paginator(posts, 10)
+    page_number = request.GET.get('page')
+    posts = paginator.get_page(page_number)
+    
+    # Form for creating new posts
+    if request.method == 'POST':
+        post_form = PostForm(request.POST, request.FILES)
+        if post_form.is_valid():
+            post = post_form.save(commit=False)
+            post.author = request.user
+            post.save()
+            messages.success(request, 'Post created successfully!')
+            return redirect('social_network:home')
+    else:
+        post_form = PostForm()
+    
+    context = {
+        'posts': posts,
+        'post_form': post_form,
+        'comment_form': CommentForm(),
+    }
+    return render(request, 'social_network/home.html', context)
+
+@login_required
+def profile(request, username):
+    user = get_object_or_404(User, username=username)
+    profile, created = Profile.objects.get_or_create(user=user)
+    posts = Post.objects.filter(author=user).select_related('author').prefetch_related('likes', 'comments')
+    
+    # Check if current user is following this user
+    is_following = False
+    if request.user.is_authenticated and request.user != user:
+        is_following = Follow.objects.filter(follower=request.user, followed=user).exists()
+    
+    # Get follower and following counts
+    followers_count = Follow.objects.filter(followed=user).count()
+    following_count = Follow.objects.filter(follower=user).count()
+    
+    context = {
+        'profile': profile,
+        'posts': posts,
+        'is_following': is_following,
+        'followers_count': followers_count,
+        'following_count': following_count,
+        'is_own_profile': request.user == user,
+        'comment_form': CommentForm(),
+    }
+    return render(request, 'social_network/profile.html', context)
+
+@login_required
+def edit_profile(request):
+    profile, created = Profile.objects.get_or_create(user=request.user)
+    
+    if request.method == 'POST':
+        user_form = UserForm(request.POST, instance=request.user)
+        profile_form = ProfileForm(request.POST, request.FILES, instance=profile)
+        
+        if user_form.is_valid() and profile_form.is_valid():
+            user_form.save()
+            profile_form.save()
+            messages.success(request, 'Profile updated successfully!')
+            return redirect('social_network:profile', username=request.user.username)
+    else:
+        user_form = UserForm(instance=request.user)
+        profile_form = ProfileForm(instance=profile)
+    
+    context = {
+        'user_form': user_form,
+        'profile_form': profile_form,
+    }
+    return render(request, 'social_network/edit_profile.html', context)
+
+@login_required
+def post_detail(request, pk):
+    post = get_object_or_404(Post, pk=pk)
+    comments = Comment.objects.filter(post=post).select_related('author', 'author__profile')
+    
+    if request.method == 'POST':
+        comment_form = CommentForm(request.POST)
+        if comment_form.is_valid():
+            comment = comment_form.save(commit=False)
+            comment.post = post
+            comment.author = request.user
+            comment.save()
+            messages.success(request, 'Comment added successfully!')
+            return redirect('social_network:post_detail', pk=pk)
+    else:
+        comment_form = CommentForm()
+    
+    context = {
+        'post': post,
+        'comments': comments,
+        'comment_form': comment_form,
+    }
+    return render(request, 'social_network/post_detail.html', context)
+
+@login_required
+@require_POST
+def follow_user(request):
+    user_id = request.POST.get('user_id')
+    user_to_follow = get_object_or_404(User, id=user_id)
+    
+    if user_to_follow == request.user:
+        return JsonResponse({'status': 'error', 'message': 'You cannot follow yourself'})
+    
+    follow_obj, created = Follow.objects.get_or_create(
+        follower=request.user,
+        followed=user_to_follow
+    )
+    
+    if created:
+        status = 'followed'
+        message = f'You are now following {user_to_follow.username}'
+    else:
+        follow_obj.delete()
+        status = 'unfollowed'
+        message = f'You unfollowed {user_to_follow.username}'
+    
+    followers_count = Follow.objects.filter(followed=user_to_follow).count()
+    
+    return JsonResponse({
+        'status': status,
+        'message': message,
+        'followers_count': followers_count
+    })
+
+@login_required
+@require_POST
+def like_content(request):
+    content_type_id = request.POST.get('content_type_id')
+    object_id = request.POST.get('object_id')
+    
+    content_type = get_object_or_404(ContentType, id=content_type_id)
+    
+    like_obj, created = Like.objects.get_or_create(
+        user=request.user,
+        content_type=content_type,
+        object_id=object_id
+    )
+    
+    if not created:
+        like_obj.delete()
+        status = 'unliked'
+    else:
+        status = 'liked'
+    
+    # Get updated like count
+    like_count = Like.objects.filter(
+        content_type=content_type,
+        object_id=object_id
+    ).count()
+    
+    return JsonResponse({
+        'status': status,
+        'like_count': like_count
+    })
+
+@login_required
+@require_POST
+def add_comment(request):
+    post_id = request.POST.get('post_id')
+    content = request.POST.get('content')
+    
+    post = get_object_or_404(Post, id=post_id)
+    
+    if content:
+        comment = Comment.objects.create(
+            post=post,
+            author=request.user,
+            content=content
+        )
+        
+        return JsonResponse({
+            'status': 'success',
+            'comment': {
+                'id': comment.id,
+                'content': comment.content,
+                'author': comment.author.username,
+                'created_at': comment.created_at.strftime('%b %d, %Y at %I:%M %p'),
+                'author_profile_picture': comment.author.profile.profile_picture.url if comment.author.profile.profile_picture else None,
+            },
+            'comment_count': post.comments.count()
+        })
+    
+    return JsonResponse({'status': 'error', 'message': 'Content cannot be empty'})
+
+def user_search(request):
+    query = request.GET.get('q')
+    users = []
+    
+    if query:
+        users = User.objects.filter(
+            Q(username__icontains=query) |
+            Q(first_name__icontains=query) |
+            Q(last_name__icontains=query)
+        ).select_related('profile')[:10]
+    
+    context = {
+        'users': users,
+        'query': query,
+    }
+    return render(request, 'social_network/search.html', context)
+## Step 6: Create URLs
+from django.urls import path
+from . import views
+
+app_name = 'social_network'
+
+urlpatterns = [
+    # Authentication
+    path('register/', views.register, name='register'),
+    
+    # Main pages
+    path('', views.home, name='home'),
+    path('profile/<str:username>/', views.profile, name='profile'),
+    path('profile/edit/', views.edit_profile, name='edit_profile'),
+    path('post/<int:pk>/', views.post_detail, name='post_detail'),
+    path('search/', views.user_search, name='search'),
+    
+    # AJAX endpoints
+    path('follow/', views.follow_user, name='follow_user'),
+    path('like/', views.like_content, name='like_content'),
+    path('comment/', views.add_comment, name='add_comment'),
+]
+## Step 7: Update Main URLs
+
+Add this to your main `projects/urls.py`:
+
+```python
+from django.contrib import admin
+from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
+
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('accounts/', include('django.contrib.auth.urls')),
+    path('', include('social_network.urls')),
+]
+
+# Serve media files during development
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+```
+
+## Step 8: Update Settings for Media Files
+
+Add these to your `settings.py`:
+
+```python
+import os
+
+# Media files
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# Login URLs
+LOGIN_URL = '/accounts/login/'
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/'
+```
+
+## Step 9: Create Templates Directory Structure
+
+Create these directories:
+```
+social_network/
+├── templates/
+│   ├── registration/
+│   └── social_network/
+```
+
+## Step 10: Create Templates
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Social Network{% endblock %}</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .profile-img {
+            width: 40px;
+            height: 40px;
+            object-fit: cover;
+            border-radius: 50%;
+        }
+        .post-card {
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            background: white;
+        }
+        .like-btn, .comment-btn {
+            border: none;
+            background: none;
+            color: #6c757d;
+            transition: color 0.3s;
+        }
+        .like-btn:hover, .comment-btn:hover {
+            color: #007bff;
+        }
+        .like-btn.liked {
+            color: #dc3545;
+        }
+        .navbar-brand {
+            font-weight: bold;
+            color: #007bff !important;
+        }
+        .comment-section {
+            border-top: 1px solid #dee2e6;
+            padding-top: 15px;
+            margin-top: 15px;
+        }
+        .comment-item {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top">
+        <div class="container">
+            <a class="navbar-brand" href="{% url 'social_network:home' %}">
+                <i class="fas fa-users"></i> SocialNet
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    {% if user.is_authenticated %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'social_network:home' %}">
+                                <i class="fas fa-home"></i> Home
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'social_network:search' %}">
+                                <i class="fas fa-search"></i> Search
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+                
+                <ul class="navbar-nav">
+                    {% if user.is_authenticated %}
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
+                                {% if user.profile.profile_picture %}
+                                    <img src="{{ user.profile.profile_picture.url }}" alt="{{ user.username }}" class="profile-img me-1">
+                                {% endif %}
+                                {{ user.username }}
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="{% url 'social_network:profile' user.username %}">
+                                    <i class="fas fa-user"></i> Profile
+                                </a></li>
+                                <li><a class="dropdown-item" href="{% url 'social_network:edit_profile' %}">
+                                    <i class="fas fa-edit"></i> Edit Profile
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{% url 'logout' %}">
+                                    <i class="fas fa-sign-out-alt"></i> Logout
+                                </a></li>
+                            </ul>
+                        </li>
+                    {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'login' %}">Login</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'social_network:register' %}">Register</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Messages -->
+    {% if messages %}
+        <div class="container mt-3">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- Main Content -->
+    <div class="container mt-4">
+        {% block content %}
+        {% endblock %}
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.0/jquery.min.js"></script>
+    
+    <script>
+        // CSRF token for AJAX requests
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        const csrftoken = getCookie('csrftoken');
+
+        // Follow/Unfollow functionality
+        $(document).on('click', '.follow-btn', function() {
+            const btn = $(this);
+            const userId = btn.data('user-id');
+            
+            $.post('{% url "social_network:follow_user" %}', {
+                'user_id': userId,
+                'csrfmiddlewaretoken': csrftoken
+            })
+            .done(function(data) {
+                if (data.status === 'followed') {
+                    btn.removeClass('btn-primary').addClass('btn-outline-primary');
+                    btn.text('Unfollow');
+                } else {
+                    btn.removeClass('btn-outline-primary').addClass('btn-primary');
+                    btn.text('Follow');
+                }
+                $('.followers-count').text(data.followers_count);
+            });
+        });
+
+        // Like/Unlike functionality
+        $(document).on('click', '.like-btn', function() {
+            const btn = $(this);
+            const contentTypeId = btn.data('content-type-id');
+            const objectId = btn.data('object-id');
+            
+            $.post('{% url "social_network:like_content" %}', {
+                'content_type_id': contentTypeId,
+                'object_id': objectId,
+                'csrfmiddlewaretoken': csrftoken
+            })
+            .done(function(data) {
+                const icon = btn.find('i');
+                const countSpan = btn.find('.like-count');
+                
+                if (data.status === 'liked') {
+                    btn.addClass('liked');
+                    icon.removeClass('far').addClass('fas');
+                } else {
+                    btn.removeClass('liked');
+                    icon.removeClass('fas').addClass('far');
+                }
+                countSpan.text(data.like_count);
+            });
+        });
+
+        // Add comment functionality
+        $(document).on('click', '.add-comment-btn', function() {
+            const btn = $(this);
+            const postId = btn.data('post-id');
+            const commentInput = btn.siblings('.comment-input');
+            const content = commentInput.val().trim();
+            
+            if (!content) {
+                alert('Please enter a comment');
+                return;
+            }
+            
+            $.post('{% url "social_network:add_comment" %}', {
+                'post_id': postId,
+                'content': content,
+                'csrfmiddlewaretoken': csrftoken
+            })
+            .done(function(data) {
+                if (data.status === 'success') {
+                    const commentsContainer = btn.closest('.post-card').find('.comments-container');
+                    const newComment = `
+                        <div class="comment-item">
+                            <div class="d-flex">
+                                <div class="flex-shrink-0">
+                                    ${data.comment.author_profile_picture ? 
+                                        `<img src="${data.comment.author_profile_picture}" alt="${data.comment.author}" class="profile-img">` :
+                                        `<div class="profile-img bg-secondary d-flex align-items-center justify-content-center">
+                                            <i class="fas fa-user text-white"></i>
+                                        </div>`
+                                    }
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <strong>${data.comment.author}</strong>
+                                    <small class="text-muted">${data.comment.created_at}</small>
+                                    <p class="mb-0 mt-1">${data.comment.content}</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    commentsContainer.append(newComment);
+                    commentInput.val('');
+                    
+                    // Update comment count
+                    btn.closest('.post-card').find('.comment-count').text(data.comment_count);
+                }
+            });
+        });
+    </script>
+    
+    {% block extra_js %}
+    {% endblock %}
+</body>
+</html>
+{% extends 'social_network/base.html' %}
+
+{% block title %}Home - Social Network{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Main Content -->
+    <div class="col-lg-8">
+        <!-- Create Post Form -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="d-flex">
+                        <div class="flex-shrink-0">
+                            {% if user.profile.profile_picture %}
+                                <img src="{{ user.profile.profile_picture.url }}" alt="{{ user.username }}" class="profile-img">
+                            {% else %}
+                                <div class="profile-img bg-secondary d-flex align-items-center justify-content-center">
+                                    <i class="fas fa-user text-white"></i>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            {{ post_form.content }}
+                            <div class="mt-3">
+                                {{ post_form.image }}
+                            </div>
+                            <div class="mt-3">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-paper-plane"></i> Post
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Posts Feed -->
+        {% for post in posts %}
+            <div class="post-card">
+                <div class="card-body">
+                    <!-- Post Header -->
+                    <div class="d-flex mb-3">
+                        <div class="flex-shrink-0">
+                            {% if post.author.profile.profile_picture %}
+                                <img src="{{ post.author.profile.profile_picture.url }}" alt="{{ post.author.username }}" class="profile-img">
+                            {% else %}
+                                <div class="profile-img bg-secondary d-flex align-items-center justify-content-center">
+                                    <i class="fas fa-user text-white"></i>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h6 class="mb-0">
+                                <a href="{% url 'social_network:profile' post.author.username %}" class="text-decoration-none">
+                                    {{ post.author.get_full_name|default:post.author.username }}
+                                </a>
+                            </h6>
+                            <small class="text-muted">@{{ post.author.username }} • {{ post.created_at|timesince }} ago</small>
+                        </div>
+                    </div>
+
+                    <!-- Post Content -->
+                    <p class="mb-3">{{ post.content }}</p>
+                    
+                    {% if post.image %}
+                        <div class="mb-3">
+                            <img src="{{ post.image.url }}" alt="Post image" class="img-fluid rounded">
+                        </div>
+                    {% endif %}
+
+                    <!-- Post Actions -->
+                    <div class="d-flex align-items-center mb-3">
+                        <button class="like-btn me-3" data-content-type-id="{{ post_content_type.id }}" data-object-id="{{ post.id }}">
+                            <i class="far fa-heart"></i>
+                            <span class="like-count">{{ post.get_like_count }}</span>
+                        </button>
+                        <button class="comment-btn" data-bs-toggle="collapse" data-bs-target="#comments-{{ post.id }}">
+                            <i class="far fa-comment"></i>
+                            <span class="comment-count">{{ post.get_comment_count }}</span>
+                        </button>
+                    </div>
+
+                    <!-- Comments Section -->
+                    <div class="collapse comment-section" id="comments-{{ post.id }}">
+                        <!-- Existing Comments -->
+                        <div class="comments-container">
+                            {% for comment in post.comments.all|slice:":3" %}
+                                <div class="comment-item">
+                                    <div class="d-flex">
+                                        <div class="flex-shrink-0">
+                                            {% if comment.author.profile.profile_picture %}
+                                                <img src="{{ comment.author.profile.profile_picture.url }}" alt="{{ comment.author.username }}" class="profile-img">
+                                            {% else %}
+                                                <div class="profile-img bg-secondary d-flex align-items-center justify-content-center">
+                                                    <i class="fas fa-user text-white"></i>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="flex-grow-1 ms-3">
+                                            <strong>{{ comment.author.username }}</strong>
+                                            <small class="text-muted">{{ comment.created_at|timesince }} ago</small>
+                                            <p class="mb-0 mt-1">{{ comment.content }}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Add Comment Form -->
+                        <div class="mt-3">
+                            <div class="d-flex">
+                                <div class="flex-shrink-0">
+                                    {% if user.profile.profile_picture %}
+                                        <img src="{{ user.profile.profile_picture.url }}" alt="{{ user.username }}" class="profile-img">
+                                    {% else %}
+                                        <div class="profile-img bg-secondary d-flex align-items-center justify-content-center">
+                                            <i class="fas fa-user text-white"></i>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <div class="input-group">
+                                        <textarea class="form-control comment-input" rows="1" placeholder="Write a comment..."></textarea>
+                                        <button class="btn btn-outline-primary add-comment-btn" data-post-id="{{ post.id }}">
+                                            <i class="fas fa-paper-plane"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <div class="text-center py-5">
+                <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">No posts yet!</h5>
+                <p class="text-muted">Follow some users to see their posts here, or create your first post above.</p>
+            </div>
+        {% endfor %}
+
+        <!-- Pagination -->
+        {% if posts.has_other_pages %}
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center">
+                    {% if posts.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ posts.previous_page_number }}">Previous</a>
+                        </li>
+                    {% endif %}
+                    
+                    {% for num in posts.paginator.page_range %}
+                        {% if posts.number == num %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ num }}</span>
+                            </li>
+                        {% elif num > posts.number|add:'-3' and num < posts.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if posts.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ posts.next_page_number }}">Next</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        {% endif %}
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="card-title">Your Profile</h6>
+                <div class="d-flex align-items-center">
+                    {% if user.profile.profile_picture %}
+                        <img src="{{ user.profile.profile_picture.url }}" alt="{{ user.username }}" class="profile-img me-3">
+                    {% else %}
+                        <div class="profile-img bg-secondary d-flex align-items-center justify-content-center me-3">
+                            <i class="fas fa-user text-white"></i>
+                        </div>
+                    {% endif %}
+                    <div>
+                        <h6 class="mb-0">{{ user.get_full_name|default:user.username }}</h6>
+                        <small class="text-muted">@{{ user.username }}</small>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <a href="{% url 'social_network:profile' user.username %}" class="btn btn-sm btn-outline-primary">View Profile</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Get content type ID for posts (needed for likes)
+    const postContentType = {{ post_content_type.id|default:0 }};
+    
+    // Update like buttons based on user's likes
+    document.addEventListener('DOMContentLoaded', function() {
+        // You can add AJAX call here to get user's likes and update buttons
+        // For now, we'll handle this in the backend
+    });
+</script>
+{% endblock %}
+
+
+
+{% extends 'social_network/base.html' %}
+
+{% block title %}{{ profile.user.get_full_name|default:profile.user.username }} - Social Network{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-4">
+        <!-- Profile Card -->
+        <div class="card">
+            <div class="card-body text-center">
+                {% if profile.profile_picture %}
+                    <img src="{{ profile.profile_picture.url }}" alt="{{ profile.user.username }}" class="rounded-circle mb-3" style="width: 120px; height: 120px; object-fit: cover;">
+                {% else %}
+                    <div class="bg-secondary rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 120px; height: 120px;">
+                        <i class="fas fa-user fa-3x text-white"></i>
+                    </div>
+                {% endif %}
+                
+                <h4>{{ profile.user.get_full_name|default:profile.user.username }}</h4>
+                <p class="text-muted mb-3">@{{ profile.user.username }}</p>
+                
+                {% if profile.bio %}
+                    <p class="text-muted">{{ profile.bio }}</p>
+                {% endif %}
+                
+                <!-- Profile Stats -->
+                <div class="row text-center mb-3">
+                    <div class="col">
+                        <strong>{{ posts.count }}</strong>
+                        <div class="small text-muted">Posts</div>
+                    </div>
+                    <div class="col">
+                        <strong class="followers-count">{{ followers_count }}</strong>
+                        <div class="small text-muted">Followers</div>
+                    </div>
+                    <div class="col">
+                        <strong>{{ following_count }}</strong>
+                        <div class="small text-muted">Following</div>
+                    </div>
+                </div>
+                
+                <!-- Action Buttons -->
+                {% if not is_own_profile %}
+                    {% if is_following %}
+                        <button class="btn btn-outline-primary follow-btn" data-user-id="{{ profile.user.id }}">
+                            Unfollow
+                        </button>
+                    {% else %}
+                        <button class="btn btn-primary follow-btn" data-user-id="{{ profile.user.id }}">
+                            Follow
+                        </button>
+                    {% endif %}
+                {% else %}
+                    <a href="{% url 'social_network:edit_profile' %}" class="btn btn-primary">
+                        <i class="fas fa-edit"></i> Edit Profile
+                    </a>
+                {% endif %}
+                
+                <!-- Additional Info -->
+                <div class="mt-4 text-start">
+                    {% if profile.location %}
+                        <div class="mb-2">
+                            <i class="fas fa-map-marker-alt text-muted me-2"></i>
+                            {{ profile.location }}
+                        </div>
+                    {% endif %}
+                    {% if profile.website %}
+                        <div class="mb-2">
+                            <i class="fas fa-link text-muted me-2"></i>
+                            <a href="{{ profile.website }}" target="_blank" rel="noopener noreferrer">
+                                {{ profile.website }}
+                            </a>
+                        </div>
+                    {% endif %}
+                    <div class="mb-2">
+                        <i class="fas fa-calendar-alt text-muted me-2"></i>
+                        Joined {{ profile.created_at|date:"F Y" }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-8">
+        <!-- Posts -->
+        <h5 class="mb-4">
+            {% if is_own_profile %}
+                Your Posts
+            {% else %}
+                {{ profile.user.username }}'s Posts
+            {% endif %}
+        </h5>
+        
+        {% for post in posts %}
+            <div class="post-card">
+                <div class="card-body">
+                    <!-- Post Header -->
+                    <div class="d-flex mb-3">
+                        <div class="flex-shrink-0">
+                            {% if post.author.profile.profile_picture %}
+                                <img src="{{ post.author.profile.profile_picture.url }}" alt="{{ post.author.username }}" class="profile-img">
+                            {% else %}
+                                <div class="profile-img bg-secondary d-flex align-items-center justify-content-center">
+                                    <i class="fas fa-user text-white"></i>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h6 class="mb-0">{{ post.author.get_full_name|default:post.author.username }}</h6>
+                            <small class="text-muted">{{ post.created_at|timesince }} ago</small>
+                        </div>
+                    </div>
+
+                    <!-- Post Content -->
+                    <p class="mb-3">{{ post.content }}</p>
+                    
+                    {% if post.image %}
+                        <div class="mb-3">
+                            <img src="{{ post.image.url }}" alt="Post image" class="img-fluid rounded">
+                        </div>
+                    {% endif %}
+
+                    <!-- Post Actions -->
+                    <div class="d-flex align-items-center mb-3">
+                        <button class="like-btn me-3" data-content-type-id="{{ post_content_type.id }}" data-object-id="{{ post.id }}">
+                            <i class="far fa-heart"></i>
+                            <span class="like-count">{{ post.get_like_count }}</span>
+                        </button>
+                        <button class="comment-btn" data-bs-toggle="collapse" data-bs-target="#comments-{{ post.id }}">
+                            <i class="far fa-comment"></i>
+                            <span class="comment-count">{{ post.get_comment_count }}</span>
+                        </button>
+                        <a href="{% url 'social_network:post_detail' post.id %}" class="btn btn-link btn-sm text-muted ms-auto">
+                            View Details
+                        </a>
+                    </div>
+
+                    <!-- Comments Section -->
+                    <div class="collapse comment-section" id="comments-{{ post.id }}">
+                        <!-- Existing Comments -->
+                        <div class="comments-container">
+                            {% for comment in post.comments.all|slice:":3" %}
+                                <div class="comment-item">
+                                    <div class="d-flex">
+                                        <div class="flex-shrink-0">
+                                            {% if comment.author.profile.profile_picture %}
+                                                <img src="{{ comment.author.profile.profile_picture.url }}" alt="{{ comment.author.username }}" class="profile-img">
+                                            {% else %}
+                                                <div class="profile-img bg-secondary d-flex align-items-center justify-content-center">
+                                                    <i class="fas fa-user text-white"></i>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="flex-grow-1 ms-3">
+                                            <strong>{{ comment.author.username }}</strong>
+                                            <small class="text-muted">{{ comment.created_at|timesince }} ago</small>
+                                            <p class="mb-0 mt-1">{{ comment.content }}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Add Comment Form (only for authenticated users) -->
+                        {% if user.is_authenticated %}
+                            <div class="mt-3">
+                                <div class="d-flex">
+                                    <div class="flex-shrink-0">
+                                        {% if user.profile.profile_picture %}
+                                            <img src="{{ user.profile.profile_picture.url }}" alt="{{ user.username }}" class="profile-img">
+                                        {% else %}
+                                            <div class="profile-img bg-secondary d-flex align-items-center justify-content-center">
+                                                <i class="fas fa-user text-white"></i>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="flex-grow-1 ms-3">
+                                        <div class="input-group">
+                                            <textarea class="form-control comment-input" rows="1" placeholder="Write a comment..."></textarea>
+                                            <button class="btn btn-outline-primary add-comment-btn" data-post-id="{{ post.id }}">
+                                                <i class="fas fa-paper-plane"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <div class="text-center py-5">
+                <i class="fas fa-pencil-alt fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">
+                    {% if is_own_profile %}
+                        You haven't posted anything yet!
+                    {% else %}
+                        {{ profile.user.username }} hasn't posted anything yet!
+                    {% endif %}
+                </h5>
+                {% if is_own_profile %}
+                    <p class="text-muted">Share your thoughts with your followers.</p>
+                    <a href="{% url 'social_network:home' %}" class="btn btn-primary">Create Your First Post</a>
+                {% endif %}
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+
+
+{% extends 'social_network/base.html' %}
+
+{% block title %}Login - Social Network{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+        <div class="card shadow">
+            <div class="card-body p-5">
+                <div class="text-center mb-4">
+                    <i class="fas fa-users fa-3x text-primary mb-3"></i>
+                    <h2>Welcome Back</h2>
+                    <p class="text-muted">Sign in to your account</p>
+                </div>
+                
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {{ form.non_field_errors }}
+                        </div>
+                    {% endif %}
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.username.id_for_label }}" class="form-label">Username</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-user"></i></span>
+                            {{ form.username }}
+                        </div>
+                        {% if form.username.errors %}
+                            <div class="text-danger small mt-1">
+                                {{ form.username.errors }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="{{ form.password.id_for_label }}" class="form-label">Password</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                            {{ form.password }}
+                        </div>
+                        {% if form.password.errors %}
+                            <div class="text-danger small mt-1">
+                                {{ form.password.errors }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-sign-in-alt me-2"></i>Sign In
+                        </button>
+                    </div>
+                </form>
+                
+                <hr class="my-4">
+                
+                <div class="text-center">
+                    <p class="mb-0">Don't have an account? 
+                        <a href="{% url 'social_network:register' %}" class="text-decoration-none">
+                            Sign up here
+                        </a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .form-control {
+        border-left: none;
+        border-radius: 0 0.375rem 0.375rem 0;
+    }
+    .input-group-text {
+        background-color: #f8f9fa;
+        border-right: none;
+    }
+</style>
+{% endblock %}
+
+
+
+{% extends 'social_network/base.html' %}
+
+{% block title %}Register - Social Network{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card shadow">
+            <div class="card-body p-5">
+                <div class="text-center mb-4">
+                    <i class="fas fa-user-plus fa-3x text-primary mb-3"></i>
+                    <h2>Join SocialNet</h2>
+                    <p class="text-muted">Create your account to get started</p>
+                </div>
+                
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {{ form.non_field_errors }}
+                        </div>
+                    {% endif %}
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.first_name.id_for_label }}" class="form-label">First Name</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-user"></i></span>
+                                {{ form.first_name }}
+                            </div>
+                            {% if form.first_name.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.first_name.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.last_name.id_for_label }}" class="form-label">Last Name</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-user"></i></span>
+                                {{ form.last_name }}
+                            </div>
+                            {% if form.last_name.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.last_name.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.username.id_for_label }}" class="form-label">Username</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-at"></i></span>
+                            {{ form.username }}
+                        </div>
+                        {% if form.username.errors %}
+                            <div class="text-danger small mt-1">
+                                {{ form.username.errors }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.email.id_for_label }}" class="form-label">Email</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                            {{ form.email }}
+                        </div>
+                        {% if form.email.errors %}
+                            <div class="text-danger small mt-1">
+                                {{ form.email.errors }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.password1.id_for_label }}" class="form-label">Password</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                            {{ form.password1 }}
+                        </div>
+                        {% if form.password1.errors %}
+                            <div class="text-danger small mt-1">
+                                {{ form.password1.errors }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="{{ form.password2.id_for_label }}" class="form-label">Confirm Password</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                            {{ form.password2 }}
+                        </div>
+                        {% if form.password2.errors %}
+                            <div class="text-danger small mt-1">
+                                {{ form.password2.errors }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-user-plus me-2"></i>Create Account
+                        </button>
+                    </div>
+                </form>
+                
+                <hr class="my-4">
+                
+                <div class="text-center">
+                    <p class="mb-0">Already have an account? 
+                        <a href="{% url 'login' %}" class="text-decoration-none">
+                            Sign in here
+                        </a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .form-control {
+        border-left: none;
+        border-radius: 0 0.375rem 0.375rem 0;
+    }
+    .input-group-text {
+        background-color: #f8f9fa;
+        border-right: none;
+    }
+</style>
+{% endblock %}
